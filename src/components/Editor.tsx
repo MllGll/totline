@@ -1,0 +1,220 @@
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type ClipboardEvent,
+  type KeyboardEvent,
+  type UIEvent,
+} from "react";
+import { CheckboxOverlay } from "./CheckboxOverlay";
+import {
+  cursorAfterToggle,
+  toggleCheckboxInContent,
+} from "../lib/checkbox";
+
+interface EditorProps {
+  content: string;
+  zoom: number;
+  cursor: number;
+  selectionStart: number;
+  selectionEnd: number;
+  scrollTop: number;
+  scrollLeft: number;
+  resolved: "light" | "dark";
+  onContentChange: (content: string) => void;
+  onCursorChange: (cursor: number) => void;
+  onSelectionChange: (start: number, end: number) => void;
+  onScrollChange: (top: number, left: number) => void;
+  onZoomChange: (zoom: number) => void;
+  onZoomActivity: () => void;
+}
+
+const BASE_FONT_SIZE = 15;
+const LINE_HEIGHT = 1.65;
+const MIN_ZOOM = 0.75;
+const MAX_ZOOM = 2;
+const EDITOR_PADDING_X = 20;
+const EDITOR_PADDING_Y = 16;
+
+export function Editor({
+  content,
+  zoom,
+  cursor,
+  selectionStart,
+  selectionEnd,
+  scrollTop,
+  scrollLeft,
+  resolved,
+  onContentChange,
+  onCursorChange,
+  onSelectionChange,
+  onScrollChange,
+  onZoomChange,
+  onZoomActivity,
+}: EditorProps) {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [localScrollTop, setLocalScrollTop] = useState(scrollTop);
+  const isDark = resolved === "dark";
+
+  useLayoutEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    textarea.scrollTop = scrollTop;
+    textarea.scrollLeft = scrollLeft;
+    textarea.setSelectionRange(selectionStart, selectionEnd);
+    setLocalScrollTop(scrollTop);
+  }, []);
+
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea || document.activeElement === textarea) return;
+    textarea.setSelectionRange(selectionStart, selectionEnd);
+  }, [selectionStart, selectionEnd]);
+
+  const handleChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
+    onContentChange(event.target.value);
+    onCursorChange(event.target.selectionStart);
+    onSelectionChange(
+      event.target.selectionStart,
+      event.target.selectionEnd,
+    );
+  };
+
+  const handleSelect = () => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    onCursorChange(textarea.selectionStart);
+    onSelectionChange(textarea.selectionStart, textarea.selectionEnd);
+  };
+
+  const handleScroll = (event: UIEvent<HTMLTextAreaElement>) => {
+    const target = event.currentTarget;
+    setLocalScrollTop(target.scrollTop);
+    onScrollChange(target.scrollTop, target.scrollLeft);
+  };
+
+  const handleWheel = (event: React.WheelEvent<HTMLTextAreaElement>) => {
+    if (!event.ctrlKey) return;
+    event.preventDefault();
+    const delta = event.deltaY > 0 ? -0.05 : 0.05;
+    const next = clamp(zoom + delta, MIN_ZOOM, MAX_ZOOM);
+    onZoomChange(Number(next.toFixed(2)));
+    onZoomActivity();
+  };
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key === "Tab") {
+      event.preventDefault();
+      insertText("\t");
+      return;
+    }
+
+    if ((event.ctrlKey || event.metaKey) && event.key === "0") {
+      event.preventDefault();
+      onZoomChange(1);
+      onZoomActivity();
+    }
+  };
+
+  const insertText = (text: string) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const next =
+      content.slice(0, start) + text + content.slice(end);
+
+    onContentChange(next);
+    const cursorPos = start + text.length;
+    requestAnimationFrame(() => {
+      textarea.setSelectionRange(cursorPos, cursorPos);
+      onCursorChange(cursorPos);
+      onSelectionChange(cursorPos, cursorPos);
+    });
+  };
+
+  const handleToggleCheckbox = useCallback(
+    (lineIndex: number) => {
+      const textarea = textareaRef.current;
+      const previousCursor = textarea?.selectionStart ?? cursor;
+      const nextContent = toggleCheckboxInContent(content, lineIndex);
+      const nextCursor = cursorAfterToggle(
+        nextContent,
+        lineIndex,
+        previousCursor,
+      );
+
+      onContentChange(nextContent);
+      requestAnimationFrame(() => {
+        if (!textarea) return;
+        textarea.focus();
+        textarea.setSelectionRange(nextCursor, nextCursor);
+        onCursorChange(nextCursor);
+        onSelectionChange(nextCursor, nextCursor);
+      });
+    },
+    [
+      content,
+      cursor,
+      onContentChange,
+      onCursorChange,
+      onSelectionChange,
+    ],
+  );
+
+  const handlePaste = (event: ClipboardEvent<HTMLTextAreaElement>) => {
+    event.preventDefault();
+    const text = event.clipboardData.getData("text/plain");
+    insertText(text);
+  };
+
+  const fontSize = BASE_FONT_SIZE * zoom;
+
+  return (
+    <div className="relative h-full w-full">
+      <textarea
+        ref={textareaRef}
+        className={[
+          "editor-textarea totline-scroll font-mono",
+          isDark ? "text-zinc-100 placeholder:text-zinc-400" : "text-zinc-800 placeholder:text-zinc-500",
+        ].join(" ")}
+        value={content}
+        spellCheck={false}
+        placeholder="Comece a escrever…"
+        onChange={handleChange}
+        onSelect={handleSelect}
+        onScroll={handleScroll}
+        onWheel={handleWheel}
+        onKeyDown={handleKeyDown}
+        onPaste={handlePaste}
+        style={{
+          fontSize: `${fontSize}px`,
+          lineHeight: LINE_HEIGHT,
+          padding: `${EDITOR_PADDING_Y}px ${EDITOR_PADDING_X}px`,
+          color: isDark ? "var(--text-dark)" : "var(--text-light)",
+        }}
+      />
+
+      <CheckboxOverlay
+        content={content}
+        zoom={zoom}
+        fontSize={BASE_FONT_SIZE}
+        lineHeight={BASE_FONT_SIZE * LINE_HEIGHT}
+        paddingTop={EDITOR_PADDING_Y}
+        paddingLeft={EDITOR_PADDING_X}
+        scrollTop={localScrollTop}
+        resolved={resolved}
+        onToggle={handleToggleCheckbox}
+      />
+    </div>
+  );
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}

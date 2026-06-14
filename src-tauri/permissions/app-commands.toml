@@ -1,0 +1,14 @@
+[[permission]]
+identifier = "allow-app-commands"
+description = "Allow TOTLINE persistence and window commands"
+commands.allow = [
+  "load_app_state",
+  "save_app_state",
+  "load_window_state",
+  "save_window_state",
+  "minimize_window",
+  "hide_window",
+  "show_window",
+  "set_always_on_top",
+  "quit_app"
+]

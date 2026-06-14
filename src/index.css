@@ -1,0 +1,125 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light dark;
+  --surface-light: rgba(255, 255, 255, 0.62);
+  --surface-dark: rgba(18, 18, 20, 0.58);
+  --text-light: rgba(24, 24, 27, 0.92);
+  --text-dark: rgba(244, 244, 245, 0.94);
+  --muted-light: rgba(24, 24, 27, 0.45);
+  --muted-dark: rgba(244, 244, 245, 0.42);
+  --accent-light: rgba(59, 130, 246, 0.85);
+  --accent-dark: rgba(96, 165, 250, 0.9);
+  --shadow-light: 0 18px 50px rgba(15, 23, 42, 0.14);
+  --shadow-dark: 0 22px 60px rgba(0, 0, 0, 0.42);
+  --header-light: rgba(255, 255, 255, 0.72);
+  --header-dark: rgba(24, 24, 27, 0.72);
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: transparent;
+}
+
+body {
+  margin: 0;
+  font-family: "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+::selection {
+  background: rgba(59, 130, 246, 0.28);
+}
+
+.theme-dark ::selection {
+  background: rgba(96, 165, 250, 0.32);
+}
+
+.totline-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(120, 120, 128, 0.35) transparent;
+}
+
+.totline-scroll::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.totline-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.totline-scroll::-webkit-scrollbar-thumb {
+  background: rgba(120, 120, 128, 0.35);
+  border-radius: 999px;
+}
+
+.totline-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(120, 120, 128, 0.55);
+}
+
+.editor-textarea {
+  resize: none;
+  border: none;
+  outline: none;
+  background: transparent;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  margin: 0;
+  line-height: 1.65;
+  letter-spacing: 0.01em;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  scroll-behavior: smooth;
+}
+
+.editor-textarea::placeholder {
+  opacity: 0.45;
+}
+
+.editor-textarea::selection {
+  background: rgba(59, 130, 246, 0.28);
+}
+
+.theme-dark .editor-textarea::selection {
+  background: rgba(96, 165, 250, 0.32);
+}
+
+.checkbox-hit {
+  cursor: pointer;
+  transition: transform 120ms ease, opacity 120ms ease;
+}
+
+.checkbox-hit:hover {
+  transform: scale(1.06);
+}
+
+.checkbox-hit:active {
+  transform: scale(0.96);
+}
+
+@keyframes zoom-hud-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.zoom-hud {
+  animation: zoom-hud-in 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
