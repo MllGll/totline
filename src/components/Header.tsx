@@ -5,6 +5,7 @@ interface HeaderProps {
   alwaysOnTop: boolean;
   onAlwaysOnTopChange: (value: boolean) => void;
   onHelp: () => void;
+  onClose: () => void;
 }
 
 export function Header({
@@ -12,6 +13,7 @@ export function Header({
   alwaysOnTop,
   onAlwaysOnTopChange,
   onHelp,
+  onClose,
 }: HeaderProps) {
   return (
     <header
@@ -68,6 +70,27 @@ export function Header({
           aria-label="Ajuda"
         >
           ?
+        </button>
+
+        <button
+          type="button"
+          onClick={onClose}
+          className="app-header-button"
+          title="Ocultar"
+          aria-label="Ocultar"
+        >
+          <svg
+            viewBox="0 0 16 16"
+            className="h-3 w-3"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.7"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden
+          >
+            <path d="M3.5 8h9" />
+          </svg>
         </button>
       </div>
     </header>

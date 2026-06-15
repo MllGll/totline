@@ -153,17 +153,21 @@ export default function App() {
     };
   }, [ready, persistWindowNow]);
 
+  const handleMinimize = useCallback(() => {
+    void minimizeWindow();
+  }, []);
+
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         event.preventDefault();
-        void minimizeWindow();
+        handleMinimize();
       }
     };
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, []);
+  }, [handleMinimize]);
 
   const showZoomHud = useCallback(() => {
     setZoomHudVisible(true);
@@ -213,6 +217,7 @@ export default function App() {
         alwaysOnTop={state.alwaysOnTop}
         onAlwaysOnTopChange={(alwaysOnTop) => updateState({ alwaysOnTop })}
         onHelp={() => setHelpVisible(true)}
+        onClose={handleMinimize}
       />
 
       <ZoomHud zoom={state.zoom} visible={zoomHudVisible} />

@@ -7,7 +7,7 @@ export function HelpOverlay({ visible, onClose }: HelpOverlayProps) {
   if (!visible) return null;
 
   const shortcuts = [
-    ["Esc", "Minimizar"],
+    ["Esc", "Ocultar janela"],
     ["Ctrl", "+", "Scroll", "Zoom"],
     ["Ctrl", "+", "0", "Resetar zoom"],
     ["[ ]", "/ [x]", "Tarefas"],
@@ -87,6 +87,10 @@ export function HelpOverlay({ visible, onClose }: HelpOverlayProps) {
           <p className="tone-copy-dim text-[11px] leading-relaxed">
             Um unico caderno infinito. Sem arquivos, sem estrutura visivel,
             apenas memoria em texto.
+          </p>
+          <p className="tone-copy-dim mt-3 text-[11px] leading-relaxed">
+            Esc e o botao de ocultar apenas tiram a janela da frente. O app
+            continua ativo em segundo plano.
           </p>
         </div>
 
