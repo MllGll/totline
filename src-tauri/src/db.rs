@@ -15,6 +15,7 @@ pub struct AppState {
     pub zoom: f64,
     pub theme: String,
     pub always_on_top: bool,
+    pub last_window_visible: bool,
 }
 
 impl Default for AppState {
@@ -29,6 +30,7 @@ impl Default for AppState {
             zoom: 1.0,
             theme: "system".to_string(),
             always_on_top: true,
+            last_window_visible: true,
         }
     }
 }
@@ -85,7 +87,8 @@ impl Database {
                 scroll_left REAL NOT NULL DEFAULT 0,
                 zoom REAL NOT NULL DEFAULT 1,
                 theme TEXT NOT NULL DEFAULT 'system',
-                always_on_top INTEGER NOT NULL DEFAULT 1
+                always_on_top INTEGER NOT NULL DEFAULT 1,
+                last_window_visible INTEGER NOT NULL DEFAULT 1
             );
 
             CREATE TABLE IF NOT EXISTS window_state (
@@ -100,13 +103,17 @@ impl Database {
             INSERT OR IGNORE INTO window_state (id) VALUES (1);
             ",
         )?;
+        let _ = conn.execute(
+            "ALTER TABLE app_state ADD COLUMN last_window_visible INTEGER NOT NULL DEFAULT 1",
+            [],
+        );
         Ok(())
     }
 
     pub fn load_app_state(&self) -> rusqlite::Result<AppState> {
         let conn = self.conn.lock().unwrap();
         conn.query_row(
-            "SELECT content, cursor, selection_start, selection_end, scroll_top, scroll_left, zoom, theme, always_on_top
+            "SELECT content, cursor, selection_start, selection_end, scroll_top, scroll_left, zoom, theme, always_on_top, last_window_visible
              FROM app_state WHERE id = 1",
             [],
             |row| {
@@ -120,6 +127,7 @@ impl Database {
                     zoom: row.get(6)?,
                     theme: row.get(7)?,
                     always_on_top: row.get::<_, i64>(8)? == 1,
+                    last_window_visible: row.get::<_, i64>(9)? == 1,
                 })
             },
         )
@@ -137,7 +145,8 @@ impl Database {
                 scroll_left = ?6,
                 zoom = ?7,
                 theme = ?8,
-                always_on_top = ?9
+                always_on_top = ?9,
+                last_window_visible = ?10
              WHERE id = 1",
             params![
                 state.content,
@@ -149,6 +158,7 @@ impl Database {
                 state.zoom,
                 state.theme,
                 if state.always_on_top { 1 } else { 0 },
+                if state.last_window_visible { 1 } else { 0 },
             ],
         )?;
         Ok(())

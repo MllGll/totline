@@ -15,15 +15,18 @@ Pré-requisitos: Node.js 18+, Rust (stable), **Visual Studio Build Tools** (C++)
 
 ```bash
 npm install
-npm run tauri dev
+npm run tauri:dev
 ```
+
+> **Git Bash / MINGW64:** use `npm run tauri:dev` (configura Cargo e MSVC no PATH automaticamente).  
+> Alternativa permanente no Git Bash: `echo 'export PATH="$HOME/.cargo/bin:$PATH"' >> ~/.bashrc`
 
 > **Nota Windows:** se `link.exe` não for encontrado, instale [Build Tools for Visual Studio](https://visualstudio.microsoft.com/visual-cpp-build-tools/) com a carga "Desktop development with C++".
 
 ## Produção
 
 ```bash
-npm run tauri build
+npm run tauri:build
 ```
 
 ## Atalhos e comportamento
@@ -35,7 +38,11 @@ npm run tauri build
 | **Ctrl + scroll** | Zoom do editor |
 | **Ctrl + 0** | Restaura zoom para 100% |
 | **Topo da janela (hover)** | Revela o header com controles |
-| **Bandeja** | Clique esquerdo mostra; menu: Mostrar / Sair |
+| **Bandeja → Sair** | Flush + grava antes de encerrar |
+
+## Preferência de startup
+
+Se a janela estava oculta na bandeja ao fechar, o app **reabre oculto** na bandeja na próxima execução.
 
 ## Checkboxes
 

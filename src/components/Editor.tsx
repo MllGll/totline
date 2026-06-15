@@ -10,6 +10,7 @@ import {
   type UIEvent,
 } from "react";
 import { CheckboxOverlay } from "./CheckboxOverlay";
+import { EditorMirror } from "./EditorMirror";
 import {
   cursorAfterToggle,
   toggleCheckboxInContent,
@@ -23,7 +24,7 @@ interface EditorProps {
   selectionEnd: number;
   scrollTop: number;
   scrollLeft: number;
-  resolved: "light" | "dark";
+  headerVisible: boolean;
   onContentChange: (content: string) => void;
   onCursorChange: (cursor: number) => void;
   onSelectionChange: (start: number, end: number) => void;
@@ -38,6 +39,7 @@ const MIN_ZOOM = 0.75;
 const MAX_ZOOM = 2;
 const EDITOR_PADDING_X = 20;
 const EDITOR_PADDING_Y = 16;
+const EDITOR_HEADER_PADDING_Y = 48;
 
 export function Editor({
   content,
@@ -47,7 +49,7 @@ export function Editor({
   selectionEnd,
   scrollTop,
   scrollLeft,
-  resolved,
+  headerVisible,
   onContentChange,
   onCursorChange,
   onSelectionChange,
@@ -57,7 +59,7 @@ export function Editor({
 }: EditorProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [localScrollTop, setLocalScrollTop] = useState(scrollTop);
-  const isDark = resolved === "dark";
+  const [localScrollLeft, setLocalScrollLeft] = useState(scrollLeft);
 
   useLayoutEffect(() => {
     const textarea = textareaRef.current;
@@ -67,6 +69,7 @@ export function Editor({
     textarea.scrollLeft = scrollLeft;
     textarea.setSelectionRange(selectionStart, selectionEnd);
     setLocalScrollTop(scrollTop);
+    setLocalScrollLeft(scrollLeft);
   }, []);
 
   useEffect(() => {
@@ -94,6 +97,7 @@ export function Editor({
   const handleScroll = (event: UIEvent<HTMLTextAreaElement>) => {
     const target = event.currentTarget;
     setLocalScrollTop(target.scrollTop);
+    setLocalScrollLeft(target.scrollLeft);
     onScrollChange(target.scrollTop, target.scrollLeft);
   };
 
@@ -174,15 +178,26 @@ export function Editor({
   };
 
   const fontSize = BASE_FONT_SIZE * zoom;
+  const paddingY = headerVisible
+    ? EDITOR_HEADER_PADDING_Y
+    : EDITOR_PADDING_Y;
 
   return (
     <div className="relative h-full w-full">
+      <EditorMirror
+        content={content}
+        zoom={zoom}
+        fontSize={BASE_FONT_SIZE}
+        lineHeight={LINE_HEIGHT}
+        paddingX={EDITOR_PADDING_X}
+        paddingY={paddingY}
+        scrollTop={localScrollTop}
+        scrollLeft={localScrollLeft}
+      />
+
       <textarea
         ref={textareaRef}
-        className={[
-          "editor-textarea totline-scroll font-mono",
-          isDark ? "text-zinc-100 placeholder:text-zinc-400" : "text-zinc-800 placeholder:text-zinc-500",
-        ].join(" ")}
+        className="editor-textarea totline-scroll relative z-10 font-mono"
         value={content}
         spellCheck={false}
         placeholder="Comece a escrever…"
@@ -195,8 +210,7 @@ export function Editor({
         style={{
           fontSize: `${fontSize}px`,
           lineHeight: LINE_HEIGHT,
-          padding: `${EDITOR_PADDING_Y}px ${EDITOR_PADDING_X}px`,
-          color: isDark ? "var(--text-dark)" : "var(--text-light)",
+          padding: `${paddingY}px ${EDITOR_PADDING_X}px`,
         }}
       />
 
@@ -205,10 +219,9 @@ export function Editor({
         zoom={zoom}
         fontSize={BASE_FONT_SIZE}
         lineHeight={BASE_FONT_SIZE * LINE_HEIGHT}
-        paddingTop={EDITOR_PADDING_Y}
+        paddingTop={paddingY}
         paddingLeft={EDITOR_PADDING_X}
         scrollTop={localScrollTop}
-        resolved={resolved}
         onToggle={handleToggleCheckbox}
       />
     </div>

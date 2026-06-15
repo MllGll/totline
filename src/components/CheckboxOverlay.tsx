@@ -1,5 +1,9 @@
 import { useMemo } from "react";
-import { parseCheckboxLines } from "../lib/checkbox";
+import {
+  checkboxLeftPx,
+  measureTextWidth,
+  parseCheckboxLines,
+} from "../lib/checkbox";
 
 interface CheckboxOverlayProps {
   content: string;
@@ -9,7 +13,6 @@ interface CheckboxOverlayProps {
   paddingTop: number;
   paddingLeft: number;
   scrollTop: number;
-  resolved: "light" | "dark";
   onToggle: (lineIndex: number) => void;
 }
 
@@ -21,29 +24,25 @@ export function CheckboxOverlay({
   paddingTop,
   paddingLeft,
   scrollTop,
-  resolved,
   onToggle,
 }: CheckboxOverlayProps) {
   const lines = useMemo(() => parseCheckboxLines(content), [content]);
-  const isDark = resolved === "dark";
 
   if (lines.length === 0) return null;
 
   const scaledFont = fontSize * zoom;
   const scaledLine = lineHeight * zoom;
+  const boxSize = scaledFont * 0.72;
 
   return (
     <div
-      className="pointer-events-none absolute inset-0 overflow-hidden"
+      className="pointer-events-none absolute inset-0 z-20 overflow-hidden"
       aria-hidden
     >
       {lines.map((line) => {
-        const top =
-          paddingTop + line.lineIndex * scaledLine - scrollTop;
-        const checkboxLeft =
-          paddingLeft +
-          measureTextWidth(line.indent, scaledFont) +
-          (line.hasDash ? measureTextWidth("- ", scaledFont) : 0);
+        const top = paddingTop + line.lineIndex * scaledLine - scrollTop;
+        const left = checkboxLeftPx(line.indent, scaledFont, paddingLeft);
+        const bracketWidth = measureTextWidth(line.bracketText, scaledFont);
 
         return (
           <button
@@ -52,26 +51,22 @@ export function CheckboxOverlay({
             className="checkbox-hit pointer-events-auto absolute flex items-center justify-center rounded-[3px] border"
             style={{
               top,
-              left: checkboxLeft,
-              width: scaledFont * 0.72,
-              height: scaledFont * 0.72,
-              marginTop: (scaledLine - scaledFont * 0.72) / 2,
-              borderColor: isDark
-                ? "rgba(161,161,170,0.55)"
-                : "rgba(113,113,122,0.55)",
+              left: left + (bracketWidth - boxSize) / 2,
+              width: boxSize,
+              height: boxSize,
+              marginTop: (scaledLine - boxSize) / 2,
+              borderColor: "rgba(161,161,170,0.55)",
               background: line.checked
-                ? isDark
-                  ? "rgba(96,165,250,0.85)"
-                  : "rgba(59,130,246,0.85)"
-                : isDark
-                  ? "rgba(255,255,255,0.04)"
-                  : "rgba(0,0,0,0.03)",
+                ? "rgba(96,165,250,0.85)"
+                : "rgba(255,255,255,0.06)",
             }}
             onMouseDown={(event) => {
               event.preventDefault();
               onToggle(line.lineIndex);
             }}
-            aria-label={line.checked ? "Marcar como pendente" : "Marcar como concluída"}
+            aria-label={
+              line.checked ? "Marcar como pendente" : "Marcar como concluída"
+            }
           >
             {line.checked && (
               <svg
@@ -91,13 +86,4 @@ export function CheckboxOverlay({
       })}
     </div>
   );
-}
-
-const measureCanvas = document.createElement("canvas");
-
-function measureTextWidth(text: string, fontSize: number): number {
-  const context = measureCanvas.getContext("2d");
-  if (!context) return text.length * fontSize * 0.55;
-  context.font = `${fontSize}px Cascadia Code, Consolas, ui-monospace, monospace`;
-  return context.measureText(text).width;
 }

@@ -1,10 +1,29 @@
-const CHECKBOX_PATTERN = /^(\s*)(?:-\s*)?\[([ xX])\]\s*/;
+const CHECKBOX_PATTERN = /^(\s*)\[([ xX])\](.*)$/;
 
 export interface CheckboxLine {
   lineIndex: number;
   indent: string;
   checked: boolean;
-  hasDash: boolean;
+  bracketText: string;
+}
+
+export interface CheckboxLineMatch {
+  indent: string;
+  checked: boolean;
+  bracketText: string;
+  text: string;
+}
+
+export function parseCheckboxLine(line: string): CheckboxLineMatch | null {
+  const match = line.match(CHECKBOX_PATTERN);
+  if (!match) return null;
+
+  return {
+    indent: match[1],
+    checked: match[2].toLowerCase() === "x",
+    bracketText: `[${match[2]}]`,
+    text: match[3],
+  };
 }
 
 export function parseCheckboxLines(content: string): CheckboxLine[] {
@@ -12,17 +31,22 @@ export function parseCheckboxLines(content: string): CheckboxLine[] {
   const result: CheckboxLine[] = [];
 
   lines.forEach((line, index) => {
-    const match = line.match(CHECKBOX_PATTERN);
+    const match = parseCheckboxLine(line);
     if (!match) return;
     result.push({
       lineIndex: index,
-      indent: match[1],
-      checked: match[2].toLowerCase() === "x",
-      hasDash: /^\s*-\s*\[/.test(line),
+      indent: match.indent,
+      checked: match.checked,
+      bracketText: match.bracketText,
     });
   });
 
   return result;
+}
+
+/** Texto visível no espelho — oculta a sintaxe `[ ]` / `[x]` mantendo largura. */
+export function lineForDisplay(line: string): string {
+  return line.replace(/\[([ xX])\]/, (match) => "\u00A0".repeat(match.length));
 }
 
 export function toggleCheckboxInContent(
@@ -55,4 +79,21 @@ export function cursorAfterToggle(
   const line = lines[lineIndex] ?? "";
   const relative = Math.max(0, previousCursor - offset);
   return offset + Math.min(relative, line.length);
+}
+
+export function checkboxLeftPx(
+  indent: string,
+  fontSize: number,
+  paddingLeft: number,
+): number {
+  return paddingLeft + measureTextWidth(indent, fontSize);
+}
+
+const measureCanvas = document.createElement("canvas");
+
+export function measureTextWidth(text: string, fontSize: number): number {
+  const context = measureCanvas.getContext("2d");
+  if (!context) return text.length * fontSize * 0.55;
+  context.font = `${fontSize}px Cascadia Code, Consolas, ui-monospace, monospace`;
+  return context.measureText(text).width;
 }

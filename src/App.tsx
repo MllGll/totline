@@ -1,14 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Editor } from "./components/Editor";
 import { Header, useHeaderReveal } from "./components/Header";
+import { HelpOverlay } from "./components/HelpOverlay";
 import { ZoomHud } from "./components/ZoomHud";
 import { useDebouncedCallback, useDebouncedEffect } from "./hooks/useDebounced";
-import { useResolvedTheme } from "./hooks/useResolvedTheme";
 import {
   hideWindow,
   loadAppState,
   minimizeWindow,
+  quitApp,
   saveAppState,
   saveWindowState,
   setAlwaysOnTop,
@@ -23,16 +25,27 @@ export default function App() {
   const [state, setState] = useState<AppState>(DEFAULT_STATE);
   const [ready, setReady] = useState(false);
   const [zoomHudVisible, setZoomHudVisible] = useState(false);
+  const [helpVisible, setHelpVisible] = useState(false);
   const zoomHudTimer = useRef<number | null>(null);
+  const stateRef = useRef<AppState>(DEFAULT_STATE);
   const headerVisible = useHeaderReveal();
-  const resolved = useResolvedTheme(state.theme);
+
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
 
   useEffect(() => {
     let mounted = true;
 
     loadAppState().then((loaded) => {
       if (!mounted) return;
-      setState(loaded);
+      const normalized = {
+        ...DEFAULT_STATE,
+        ...loaded,
+        lastWindowVisible: loaded.lastWindowVisible ?? true,
+      };
+      setState(normalized);
+      stateRef.current = normalized;
       setReady(true);
     });
 
@@ -41,19 +54,66 @@ export default function App() {
     };
   }, []);
 
-  useEffect(() => {
-    document.documentElement.classList.toggle("theme-dark", resolved === "dark");
-    document.documentElement.classList.toggle("theme-light", resolved === "light");
-  }, [resolved]);
-
-  const persistState = useDebouncedCallback((next: AppState) => {
+  const [persistState, flushPersist] = useDebouncedCallback((next: AppState) => {
     void saveAppState(next);
   }, AUTOSAVE_MS);
+
+  const persistWindowNow = useCallback(async () => {
+    const window = getCurrentWindow();
+    const position = await window.outerPosition();
+    const size = await window.outerSize();
+    await saveWindowState({
+      x: position.x,
+      y: position.y,
+      width: size.width,
+      height: size.height,
+    });
+  }, []);
+
+  const flushAndSave = useCallback(
+    async (patch: Partial<AppState> = {}) => {
+      flushPersist();
+      const next = { ...stateRef.current, ...patch };
+      stateRef.current = next;
+      setState(next);
+      await saveAppState(next);
+    },
+    [flushPersist],
+  );
+
+  const handleHideToTray = useCallback(async () => {
+    await flushAndSave({ lastWindowVisible: false });
+    await persistWindowNow();
+    await hideWindow();
+  }, [flushAndSave, persistWindowNow]);
+
+  const handleQuit = useCallback(async () => {
+    await flushAndSave();
+    await persistWindowNow();
+    await quitApp();
+  }, [flushAndSave, persistWindowNow]);
+
+  useEffect(() => {
+    if (!ready) return;
+
+    const unlistenHide = listen("totline-hide", () => {
+      void handleHideToTray();
+    });
+    const unlistenQuit = listen("totline-quit", () => {
+      void handleQuit();
+    });
+
+    return () => {
+      void unlistenHide.then((fn) => fn());
+      void unlistenQuit.then((fn) => fn());
+    };
+  }, [ready, handleHideToTray, handleQuit]);
 
   const updateState = useCallback(
     (patch: Partial<AppState>) => {
       setState((current) => {
         const next = { ...current, ...patch };
+        stateRef.current = next;
         persistState(next);
         return next;
       });
@@ -72,29 +132,18 @@ export default function App() {
     const window = getCurrentWindow();
     let resizeTimer: number | null = null;
 
-    const persistWindow = async () => {
-      const position = await window.outerPosition();
-      const size = await window.outerSize();
-      await saveWindowState({
-        x: position.x,
-        y: position.y,
-        width: size.width,
-        height: size.height,
-      });
+    const persistWindow = () => {
+      void persistWindowNow();
     };
 
     const unlistenMove = window.onMoved(() => {
       if (resizeTimer) clearTimeout(resizeTimer);
-      resizeTimer = setTimeout(() => {
-        void persistWindow();
-      }, 300);
+      resizeTimer = setTimeout(persistWindow, 300);
     });
 
     const unlistenResize = window.onResized(() => {
       if (resizeTimer) clearTimeout(resizeTimer);
-      resizeTimer = setTimeout(() => {
-        void persistWindow();
-      }, 300);
+      resizeTimer = setTimeout(persistWindow, 300);
     });
 
     return () => {
@@ -102,7 +151,7 @@ export default function App() {
       void unlistenMove.then((fn) => fn());
       void unlistenResize.then((fn) => fn());
     };
-  }, [ready]);
+  }, [ready, persistWindowNow]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -128,48 +177,15 @@ export default function App() {
 
   if (!ready) {
     return (
-      <div
-        className={[
-          "flex h-full w-full items-center justify-center text-sm",
-          resolved === "dark" ? "text-zinc-300" : "text-zinc-600",
-        ].join(" ")}
-      >
+      <div className="flex h-full w-full items-center justify-center text-sm text-zinc-400">
         Restaurando…
       </div>
     );
   }
 
-  const isDark = resolved === "dark";
-
   return (
-    <div
-      className={[
-        "relative h-full w-full overflow-hidden rounded-xl transition-colors duration-300",
-        isDark ? "theme-dark" : "theme-light",
-      ].join(" ")}
-      style={{
-        background: isDark ? "var(--surface-dark)" : "var(--surface-light)",
-        boxShadow: isDark ? "var(--shadow-dark)" : "var(--shadow-light)",
-        border: isDark
-          ? "1px solid rgba(255,255,255,0.08)"
-          : "1px solid rgba(0,0,0,0.06)",
-      }}
-    >
-      <Header
-        visible={headerVisible}
-        theme={state.theme}
-        alwaysOnTop={state.alwaysOnTop}
-        resolved={resolved}
-        onThemeChange={(theme) => updateState({ theme })}
-        onAlwaysOnTopChange={(alwaysOnTop) => updateState({ alwaysOnTop })}
-        onMinimize={() => void minimizeWindow()}
-        onHide={() => void hideWindow()}
-      />
-
-      <main
-        className="absolute inset-0 pt-2"
-        style={{ paddingTop: headerVisible ? 44 : 8 }}
-      >
+    <div className="app-glass relative h-full w-full overflow-hidden">
+      <main className="absolute inset-0">
         <Editor
           content={state.content}
           zoom={state.zoom}
@@ -178,7 +194,7 @@ export default function App() {
           selectionEnd={state.selectionEnd}
           scrollTop={state.scrollTop}
           scrollLeft={state.scrollLeft}
-          resolved={resolved}
+          headerVisible={headerVisible}
           onContentChange={(content) => updateState({ content })}
           onCursorChange={(cursor) => updateState({ cursor })}
           onSelectionChange={(selectionStart, selectionEnd) =>
@@ -192,7 +208,15 @@ export default function App() {
         />
       </main>
 
-      <ZoomHud zoom={state.zoom} visible={zoomHudVisible} resolved={resolved} />
+      <Header
+        visible={headerVisible}
+        alwaysOnTop={state.alwaysOnTop}
+        onAlwaysOnTopChange={(alwaysOnTop) => updateState({ alwaysOnTop })}
+        onHelp={() => setHelpVisible(true)}
+      />
+
+      <ZoomHud zoom={state.zoom} visible={zoomHudVisible} />
+      <HelpOverlay visible={helpVisible} onClose={() => setHelpVisible(false)} />
     </div>
   );
 }

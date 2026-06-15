@@ -11,7 +11,7 @@ export async function loadAppState(): Promise<AppState> {
 }
 
 export async function saveAppState(state: AppState): Promise<void> {
-  await invoke("save_app_state", { state });
+  await invoke("save_app_state", { appState: state });
 }
 
 export async function loadWindowState(): Promise<WindowState> {
@@ -23,7 +23,7 @@ export async function loadWindowState(): Promise<WindowState> {
 }
 
 export async function saveWindowState(state: WindowState): Promise<void> {
-  await invoke("save_window_state", { state });
+  await invoke("save_window_state", { windowState: state });
 }
 
 export async function minimizeWindow(): Promise<void> {

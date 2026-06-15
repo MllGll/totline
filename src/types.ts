@@ -1,5 +1,3 @@
-export type Theme = "light" | "dark" | "system";
-
 export interface AppState {
   content: string;
   cursor: number;
@@ -8,8 +6,10 @@ export interface AppState {
   scrollTop: number;
   scrollLeft: number;
   zoom: number;
-  theme: Theme;
+  theme: string;
   alwaysOnTop: boolean;
+  /** Restaura visibilidade da janela na próxima abertura (startup preference). */
+  lastWindowVisible: boolean;
 }
 
 export const DEFAULT_STATE: AppState = {
@@ -22,6 +22,7 @@ export const DEFAULT_STATE: AppState = {
   zoom: 1,
   theme: "system",
   alwaysOnTop: true,
+  lastWindowVisible: true,
 };
 
 export interface WindowState {
