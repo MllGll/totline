@@ -6,14 +6,21 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  CARGO_TERM_COLOR: always
+
 jobs:
-  quality:
-    name: Lint, typecheck, unit tests and build
-    runs-on: ubuntu-latest
+  validate:
+    name: Validate app
+    runs-on: windows-latest
+    timeout-minutes: 35
 
     steps:
       - name: Checkout repository
@@ -24,18 +31,99 @@ jobs:
         with:
           node-version: 22
           cache: npm
+          cache-dependency-path: package-lock.json
 
-      - name: Install dependencies
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('src-tauri/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Install frontend dependencies
         run: npm ci
 
-      - name: Run lint
-        run: npm run lint
+      - name: Install Playwright Chromium
+        run: npx playwright install chromium
 
-      - name: Run typecheck
-        run: npm run typecheck
-
-      - name: Run unit tests
+      - name: Run frontend unit and integration tests
         run: npm run test
 
       - name: Build frontend
         run: npm run build
+
+      - name: Run Playwright E2E tests
+        run: npm run test:e2e
+
+      - name: Check Rust and Tauri code
+        working-directory: src-tauri
+        run: cargo check
+
+      - name: Run Rust and Tauri tests
+        working-directory: src-tauri
+        run: cargo test
+
+      - name: Upload Playwright diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-diagnostics
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+
+  desktop-build:
+    name: Build Windows desktop artifacts
+    runs-on: windows-latest
+    needs: validate
+    if: github.event_name == 'push'
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('src-tauri/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build Tauri desktop app
+        run: npm run tauri:build
+
+      - name: Upload Windows desktop artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: totline-windows-${{ github.sha }}
+          path: |
+            src-tauri/target/release/totline.exe
+            src-tauri/target/release/bundle/nsis/*.exe
+            src-tauri/target/release/bundle/msi/*.msi
+          if-no-files-found: error
