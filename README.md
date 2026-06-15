@@ -12,6 +12,7 @@
 ## Table of Contents
 
 - [Description](#description)
+- [Download](#download)
 - [Features](#features)
 - [Tech Stack](#tech-stack)
 - [Getting Started](#getting-started)
@@ -26,6 +27,20 @@
 ## Description
 
 TOTLINE is a desktop writing app built around a single persistent text surface. It is designed for quick notes, ongoing thoughts, lightweight tasks, and memory capture without files, folders, tabs, or document management. The app runs as a frameless floating panel, saves local state automatically, and restores writing context across sessions.
+
+## Download
+
+Release installers should be distributed through GitHub Releases:
+
+https://github.com/MllGll/TOTLINE/releases
+
+After publishing a release with the generated installer attached, the direct download URL for the Windows setup file follows this format:
+
+```text
+https://github.com/MllGll/TOTLINE/releases/latest/download/TOTLINE_0.1.0_x64-setup.exe
+```
+
+The filename must match the asset uploaded to the GitHub release.
 
 ## Features
 
