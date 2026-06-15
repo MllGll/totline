@@ -28,7 +28,7 @@ export default function App() {
   const [helpVisible, setHelpVisible] = useState(false);
   const zoomHudTimer = useRef<number | null>(null);
   const stateRef = useRef<AppState>(DEFAULT_STATE);
-  const headerVisible = useHeaderReveal();
+  const headerVisible = useHeaderReveal(helpVisible);
 
   useEffect(() => {
     stateRef.current = state;
@@ -185,7 +185,7 @@ export default function App() {
 
   return (
     <div className="app-glass relative h-full w-full overflow-hidden">
-      <main className="absolute inset-0">
+      <main className="absolute inset-0 z-10">
         <Editor
           content={state.content}
           zoom={state.zoom}

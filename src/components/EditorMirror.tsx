@@ -40,41 +40,47 @@ export function EditorMirror({
       style={{
         fontSize: `${scaledFont}px`,
         lineHeight,
-        padding: `${paddingY}px ${paddingX}px`,
-        transform: `translate(${-scrollLeft}px, ${-scrollTop}px)`,
-        color: "rgba(228, 228, 231, 0.9)",
+        color: "rgb(var(--tone-rgb) / 0.9)",
         backgroundColor: "transparent",
         zIndex: 0,
       }}
     >
-      {lines.map((line, index) => {
-        if (!line.checkbox?.checked) {
+      <span
+        className="editor-mirror-content"
+        style={{
+          padding: `${paddingY}px ${paddingX}px`,
+          transform: `translate(${-scrollLeft}px, ${-scrollTop}px)`,
+        }}
+      >
+        {lines.map((line, index) => {
+          if (!line.checkbox?.checked) {
+            return (
+              <span
+                key={index}
+                className="block min-h-[1lh] whitespace-pre-wrap break-words"
+              >
+                {line.display}
+              </span>
+            );
+          }
+
+          const hiddenSyntax = `${line.checkbox.indent}${"\u00A0".repeat(
+            line.checkbox.bracketText.length,
+          )}`;
+
           return (
             <span
               key={index}
               className="block min-h-[1lh] whitespace-pre-wrap break-words"
             >
-              {line.display}
+              {hiddenSyntax}
+              <span className="editor-completed-line">
+                {line.checkbox.text}
+              </span>
             </span>
           );
-        }
-
-        const hiddenSyntax = `${line.checkbox.indent}${"\u00A0".repeat(
-          line.checkbox.bracketText.length,
-        )}`;
-
-        return (
-          <span
-            key={index}
-            className="block min-h-[1lh] whitespace-pre-wrap break-words"
-          >
-            {hiddenSyntax}
-            <span className="editor-completed-line">
-              {line.checkbox.text}
-            </span>
-          </span>
-        );
-      })}
+        })}
+      </span>
     </pre>
   );
 }

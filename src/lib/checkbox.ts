@@ -1,4 +1,5 @@
 const CHECKBOX_PATTERN = /^(\s*)\[([ xX])\](.*)$/;
+const TAB_SIZE = 8;
 
 export interface CheckboxLine {
   lineIndex: number;
@@ -93,7 +94,27 @@ const measureCanvas = document.createElement("canvas");
 
 export function measureTextWidth(text: string, fontSize: number): number {
   const context = measureCanvas.getContext("2d");
-  if (!context) return text.length * fontSize * 0.55;
+  const normalized = expandTabs(text);
+  if (!context) return normalized.length * fontSize * 0.55;
   context.font = `${fontSize}px Cascadia Code, Consolas, ui-monospace, monospace`;
-  return context.measureText(text).width;
+  return context.measureText(normalized).width;
+}
+
+function expandTabs(text: string): string {
+  let column = 0;
+  let result = "";
+
+  for (const char of text) {
+    if (char === "\t") {
+      const spaces = TAB_SIZE - (column % TAB_SIZE);
+      result += " ".repeat(spaces);
+      column += spaces;
+      continue;
+    }
+
+    result += char;
+    column += 1;
+  }
+
+  return result;
 }

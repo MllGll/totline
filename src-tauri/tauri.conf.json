@@ -24,7 +24,7 @@
         "transparent": true,
         "alwaysOnTop": true,
         "visible": true,
-        "shadow": true,
+        "shadow": false,
         "center": false
       }
     ],

@@ -116,6 +116,7 @@ fn show_window_internal(app: &AppHandle, data: &AppData) -> Result<(), String> {
     }
 
     if let Some(window) = app.get_webview_window("main") {
+        let _ = window.set_background_color(Some(tauri::window::Color(0, 0, 0, 0)));
         let window_state = data
             .db
             .lock()
@@ -311,6 +312,7 @@ fn restore_window(app: &AppHandle) -> Result<(), String> {
     let window = app
         .get_webview_window("main")
         .ok_or_else(|| "main window not found".to_string())?;
+    let _ = window.set_background_color(Some(tauri::window::Color(0, 0, 0, 0)));
 
     let data = app.state::<AppData>();
     let window_state = data

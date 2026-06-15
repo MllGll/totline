@@ -17,46 +17,55 @@ export function Header({
     <header
       data-tauri-drag-region
       className={[
-        "absolute inset-x-0 top-0 z-30 flex h-10 items-center justify-between px-4 transition-all duration-500 ease-out text-zinc-100",
+        "app-header absolute inset-x-0 top-0 z-30 flex h-11 items-center justify-between px-5 text-zinc-100",
         visible
           ? "translate-y-0 opacity-100"
           : "-translate-y-full opacity-0 pointer-events-none",
       ].join(" ")}
-      style={{
-        background: "rgba(24, 24, 27, 0.3)",
-        backdropFilter: "blur(20px)",
-        WebkitBackdropFilter: "blur(20px)",
-      }}
     >
       <div
         data-tauri-drag-region
-        className="flex flex-1 items-center select-none"
+        className="flex flex-1 select-none items-center gap-3"
       >
-        <span className="text-[10px] font-medium tracking-[0.3em] uppercase opacity-40">
+        <span className="app-title-dot" aria-hidden />
+        <span className="app-title text-[10px] font-medium uppercase tracking-[0.28em]">
           TOTLINE
         </span>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1.5">
         <button
           type="button"
           onClick={() => onAlwaysOnTopChange(!alwaysOnTop)}
           className={[
-            "rounded px-2 py-1 text-[10px] transition-all duration-200",
-            alwaysOnTop
-              ? "bg-white/5 text-white/60"
-              : "opacity-30 hover:opacity-60",
+            "app-header-button",
+            alwaysOnTop ? "app-header-button-active" : "",
           ].join(" ")}
           title="Sempre visível"
+          aria-label="Sempre visível"
         >
-          Pin
+          <svg
+            viewBox="0 0 16 16"
+            className="h-3 w-3"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden
+          >
+            <path d="M5.5 2.8h5" />
+            <path d="M6.3 2.8 6 6.2 4.2 8h5.6L8 6.2l-.3-3.4" />
+            <path d="M7 8v5" />
+          </svg>
         </button>
 
         <button
           type="button"
           onClick={onHelp}
-          className="rounded px-2 py-1 text-[10px] opacity-30 hover:opacity-60 transition-all duration-200"
+          className="app-header-button"
           title="Ajuda"
+          aria-label="Ajuda"
         >
           ?
         </button>
@@ -65,21 +74,26 @@ export function Header({
   );
 }
 
-export function useHeaderReveal(): boolean {
+export function useHeaderReveal(disabled = false): boolean {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
+    if (disabled) {
+      setVisible(false);
+      return;
+    }
+
     const onMove = (event: MouseEvent) => {
       if (event.clientY <= 28) {
         setVisible(true);
-      } else if (event.clientY > 56) {
+      } else if (event.clientY > 62) {
         setVisible(false);
       }
     };
 
     window.addEventListener("mousemove", onMove);
     return () => window.removeEventListener("mousemove", onMove);
-  }, []);
+  }, [disabled]);
 
   return visible;
 }

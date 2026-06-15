@@ -34,12 +34,12 @@ interface EditorProps {
 }
 
 const BASE_FONT_SIZE = 15;
-const LINE_HEIGHT = 1.65;
+const LINE_HEIGHT = 1.9;
 const MIN_ZOOM = 0.75;
 const MAX_ZOOM = 2;
-const EDITOR_PADDING_X = 20;
-const EDITOR_PADDING_Y = 16;
-const EDITOR_HEADER_PADDING_Y = 48;
+const EDITOR_PADDING_X = 38;
+const EDITOR_PADDING_Y = 44;
+const EDITOR_HEADER_PADDING_Y = 78;
 
 export function Editor({
   content,
@@ -57,9 +57,11 @@ export function Editor({
   onZoomChange,
   onZoomActivity,
 }: EditorProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [localScrollTop, setLocalScrollTop] = useState(scrollTop);
   const [localScrollLeft, setLocalScrollLeft] = useState(scrollLeft);
+  const [editorWidth, setEditorWidth] = useState(0);
 
   useLayoutEffect(() => {
     const textarea = textareaRef.current;
@@ -77,6 +79,18 @@ export function Editor({
     if (!textarea || document.activeElement === textarea) return;
     textarea.setSelectionRange(selectionStart, selectionEnd);
   }, [selectionStart, selectionEnd]);
+
+  useLayoutEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const updateWidth = () => setEditorWidth(container.clientWidth);
+    updateWidth();
+
+    const observer = new ResizeObserver(updateWidth);
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, []);
 
   const handleChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
     onContentChange(event.target.value);
@@ -183,7 +197,7 @@ export function Editor({
     : EDITOR_PADDING_Y;
 
   return (
-    <div className="relative h-full w-full">
+    <div ref={containerRef} className="relative h-full w-full">
       <EditorMirror
         content={content}
         zoom={zoom}
@@ -221,6 +235,7 @@ export function Editor({
         lineHeight={BASE_FONT_SIZE * LINE_HEIGHT}
         paddingTop={paddingY}
         paddingLeft={EDITOR_PADDING_X}
+        editorWidth={editorWidth}
         scrollTop={localScrollTop}
         onToggle={handleToggleCheckbox}
       />
