@@ -155,102 +155,22 @@ body {
   background: rgb(var(--tone-accent-rgb) / 0.34);
 }
 
-.totline-scroll {
-  scrollbar-width: thin;
-  scrollbar-color: rgb(var(--tone-soft-rgb) / 0.36) transparent;
-}
-
-.totline-scroll::-webkit-scrollbar {
+.cm-scroller::-webkit-scrollbar {
   width: 5px;
   height: 5px;
 }
 
-.totline-scroll::-webkit-scrollbar-track {
+.cm-scroller::-webkit-scrollbar-track {
   background: transparent;
 }
 
-.totline-scroll::-webkit-scrollbar-thumb {
+.cm-scroller::-webkit-scrollbar-thumb {
   background: rgb(var(--tone-soft-rgb) / 0.3);
   border-radius: 999px;
 }
 
-.totline-scroll::-webkit-scrollbar-thumb:hover {
+.cm-scroller::-webkit-scrollbar-thumb:hover {
   background: rgb(var(--tone-rgb) / 0.46);
-}
-
-.editor-mirror {
-  margin: 0;
-  border: none;
-  background: transparent;
-  tab-size: 8;
-}
-
-.editor-mirror-content {
-  display: block;
-  min-width: 100%;
-  transition: padding 220ms ease;
-  will-change: transform;
-}
-
-.editor-completed-line {
-  color: rgb(var(--tone-soft-rgb) / 0.62);
-  text-decoration: line-through;
-  text-decoration-color: rgb(var(--tone-soft-rgb) / 0.58);
-}
-
-.editor-textarea {
-  resize: none;
-  border: none;
-  outline: none;
-  background: transparent;
-  width: 100%;
-  height: 100%;
-  padding: 0;
-  margin: 0;
-  line-height: 1.9;
-  letter-spacing: 0.01em;
-  tab-size: 8;
-  white-space: pre-wrap;
-  overflow-wrap: break-word;
-  scroll-behavior: smooth;
-  color: transparent;
-  caret-color: rgb(var(--tone-rgb) / 0.98);
-  transition: padding 220ms ease;
-}
-
-.editor-textarea::placeholder {
-  color: var(--text-muted);
-  opacity: 1;
-  -webkit-text-fill-color: var(--text-muted);
-}
-
-.editor-textarea::selection {
-  background: rgb(var(--tone-accent-rgb) / 0.34);
-  color: transparent;
-}
-
-.checkbox-padding-layer {
-  transition: transform 220ms ease;
-  will-change: transform;
-}
-
-.checkbox-hit {
-  cursor: pointer;
-  backdrop-filter: blur(14px) saturate(1.08);
-  -webkit-backdrop-filter: blur(14px) saturate(1.08);
-  transition:
-    transform 120ms ease,
-    opacity 120ms ease,
-    border-color 120ms ease,
-    background 120ms ease;
-}
-
-.checkbox-hit:hover {
-  transform: scale(1.06);
-}
-
-.checkbox-hit:active {
-  transform: scale(0.96);
 }
 
 @keyframes zoom-hud-in {

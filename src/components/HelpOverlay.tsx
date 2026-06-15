@@ -11,6 +11,8 @@ export function HelpOverlay({ visible, onClose }: HelpOverlayProps) {
     ["Ctrl", "+", "Scroll", "Zoom"],
     ["Ctrl", "+", "0", "Resetar zoom"],
     ["[ ]", "/ [x]", "Tarefas"],
+    ["*texto*", "Negrito"],
+    ["*linha", "Linha em negrito"],
   ];
 
   return (

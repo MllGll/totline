@@ -1,20 +1,27 @@
 import {
   useCallback,
   useEffect,
-  useLayoutEffect,
+  useMemo,
   useRef,
-  useState,
-  type ChangeEvent,
-  type ClipboardEvent,
-  type KeyboardEvent,
-  type UIEvent,
+  type WheelEvent,
 } from "react";
-import { CheckboxOverlay } from "./CheckboxOverlay";
-import { EditorMirror } from "./EditorMirror";
+import { history, historyKeymap, insertTab } from "@codemirror/commands";
 import {
-  cursorAfterToggle,
-  toggleCheckboxInContent,
-} from "../lib/checkbox";
+  EditorSelection,
+  EditorState,
+  type Extension,
+  RangeSetBuilder,
+} from "@codemirror/state";
+import {
+  Decoration,
+  EditorView,
+  ViewPlugin,
+  WidgetType,
+  drawSelection,
+  keymap,
+  type DecorationSet,
+  type ViewUpdate,
+} from "@codemirror/view";
 
 interface EditorProps {
   content: string;
@@ -44,7 +51,7 @@ const EDITOR_HEADER_PADDING_Y = 78;
 export function Editor({
   content,
   zoom,
-  cursor,
+  cursor: _cursor,
   selectionStart,
   selectionEnd,
   scrollTop,
@@ -57,190 +64,556 @@ export function Editor({
   onZoomChange,
   onZoomActivity,
 }: EditorProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [localScrollTop, setLocalScrollTop] = useState(scrollTop);
-  const [localScrollLeft, setLocalScrollLeft] = useState(scrollLeft);
-  const [editorWidth, setEditorWidth] = useState(0);
-
-  useLayoutEffect(() => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-
-    textarea.scrollTop = scrollTop;
-    textarea.scrollLeft = scrollLeft;
-    textarea.setSelectionRange(selectionStart, selectionEnd);
-    setLocalScrollTop(scrollTop);
-    setLocalScrollLeft(scrollLeft);
-  }, []);
+  const hostRef = useRef<HTMLDivElement>(null);
+  const viewRef = useRef<EditorView | null>(null);
+  const callbacksRef = useRef({
+    onContentChange,
+    onCursorChange,
+    onSelectionChange,
+  });
+  const scrollCallbackRef = useRef(onScrollChange);
 
   useEffect(() => {
-    const textarea = textareaRef.current;
-    if (!textarea || document.activeElement === textarea) return;
-    textarea.setSelectionRange(selectionStart, selectionEnd);
-  }, [selectionStart, selectionEnd]);
-
-  useLayoutEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    const updateWidth = () => setEditorWidth(container.clientWidth);
-    updateWidth();
-
-    const observer = new ResizeObserver(updateWidth);
-    observer.observe(container);
-    return () => observer.disconnect();
-  }, []);
-
-  const handleChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
-    onContentChange(event.target.value);
-    onCursorChange(event.target.selectionStart);
-    onSelectionChange(
-      event.target.selectionStart,
-      event.target.selectionEnd,
-    );
-  };
-
-  const handleSelect = () => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-    onCursorChange(textarea.selectionStart);
-    onSelectionChange(textarea.selectionStart, textarea.selectionEnd);
-  };
-
-  const handleScroll = (event: UIEvent<HTMLTextAreaElement>) => {
-    const target = event.currentTarget;
-    setLocalScrollTop(target.scrollTop);
-    setLocalScrollLeft(target.scrollLeft);
-    onScrollChange(target.scrollTop, target.scrollLeft);
-  };
-
-  const handleWheel = (event: React.WheelEvent<HTMLTextAreaElement>) => {
-    if (!event.ctrlKey) return;
-    event.preventDefault();
-    const delta = event.deltaY > 0 ? -0.05 : 0.05;
-    const next = clamp(zoom + delta, MIN_ZOOM, MAX_ZOOM);
-    onZoomChange(Number(next.toFixed(2)));
-    onZoomActivity();
-  };
-
-  const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (event.key === "Tab") {
-      event.preventDefault();
-      insertText("\t");
-      return;
-    }
-
-    if ((event.ctrlKey || event.metaKey) && event.key === "0") {
-      event.preventDefault();
-      onZoomChange(1);
-      onZoomActivity();
-    }
-  };
-
-  const insertText = (text: string) => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const next =
-      content.slice(0, start) + text + content.slice(end);
-
-    onContentChange(next);
-    const cursorPos = start + text.length;
-    requestAnimationFrame(() => {
-      textarea.setSelectionRange(cursorPos, cursorPos);
-      onCursorChange(cursorPos);
-      onSelectionChange(cursorPos, cursorPos);
-    });
-  };
-
-  const handleToggleCheckbox = useCallback(
-    (lineIndex: number) => {
-      const textarea = textareaRef.current;
-      const previousCursor = textarea?.selectionStart ?? cursor;
-      const nextContent = toggleCheckboxInContent(content, lineIndex);
-      const nextCursor = cursorAfterToggle(
-        nextContent,
-        lineIndex,
-        previousCursor,
-      );
-
-      onContentChange(nextContent);
-      requestAnimationFrame(() => {
-        if (!textarea) return;
-        textarea.focus();
-        textarea.setSelectionRange(nextCursor, nextCursor);
-        onCursorChange(nextCursor);
-        onSelectionChange(nextCursor, nextCursor);
-      });
-    },
-    [
-      content,
-      cursor,
+    callbacksRef.current = {
       onContentChange,
       onCursorChange,
       onSelectionChange,
-    ],
-  );
+    };
+    scrollCallbackRef.current = onScrollChange;
+  }, [
+    onContentChange,
+    onCursorChange,
+    onSelectionChange,
+    onScrollChange,
+  ]);
 
-  const handlePaste = (event: ClipboardEvent<HTMLTextAreaElement>) => {
-    event.preventDefault();
-    const text = event.clipboardData.getData("text/plain");
-    insertText(text);
-  };
-
-  const fontSize = BASE_FONT_SIZE * zoom;
   const paddingY = headerVisible
     ? EDITOR_HEADER_PADDING_Y
     : EDITOR_PADDING_Y;
+  const fontSize = BASE_FONT_SIZE * zoom;
+
+  const extensions = useMemo(() => createExtensions(callbacksRef), []);
+
+  useEffect(() => {
+    const host = hostRef.current;
+    if (!host) return;
+
+    const state = EditorState.create({
+      doc: content,
+      selection: EditorSelection.range(selectionStart, selectionEnd),
+      extensions,
+    });
+    const view = new EditorView({ state, parent: host });
+    viewRef.current = view;
+
+    requestAnimationFrame(() => {
+      view.scrollDOM.scrollTop = scrollTop;
+      view.scrollDOM.scrollLeft = scrollLeft;
+    });
+
+    const onScroll = () => {
+      scrollCallbackRef.current(
+        view.scrollDOM.scrollTop,
+        view.scrollDOM.scrollLeft,
+      );
+    };
+
+    view.scrollDOM.addEventListener("scroll", onScroll, { passive: true });
+
+    return () => {
+      view.scrollDOM.removeEventListener("scroll", onScroll);
+      view.destroy();
+      viewRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    const view = viewRef.current;
+    if (!view) return;
+
+    const current = view.state.doc.toString();
+    if (current === content) return;
+
+    view.dispatch({
+      changes: { from: 0, to: current.length, insert: content },
+    });
+  }, [content]);
+
+  useEffect(() => {
+    const view = viewRef.current;
+    if (!view || view.hasFocus) return;
+
+    const selection = view.state.selection.main;
+    if (
+      selection.from === selectionStart &&
+      selection.to === selectionEnd
+    ) {
+      return;
+    }
+
+    view.dispatch({
+      selection: EditorSelection.range(selectionStart, selectionEnd),
+    });
+  }, [selectionStart, selectionEnd]);
+
+  useEffect(() => {
+    const view = viewRef.current;
+    if (!view) return;
+
+    requestAnimationFrame(() => {
+      view.scrollDOM.scrollTop = scrollTop;
+      view.scrollDOM.scrollLeft = scrollLeft;
+    });
+  }, []);
+
+  useEffect(() => {
+    const view = viewRef.current;
+    if (!view) return;
+
+    view.requestMeasure();
+    const timeout = window.setTimeout(() => view.requestMeasure(), 240);
+    return () => window.clearTimeout(timeout);
+  }, [headerVisible]);
+
+  const handleWheel = useCallback(
+    (event: WheelEvent<HTMLDivElement>) => {
+      if (!event.ctrlKey) return;
+
+      event.preventDefault();
+      const delta = event.deltaY > 0 ? -0.05 : 0.05;
+      const next = clamp(zoom + delta, MIN_ZOOM, MAX_ZOOM);
+      onZoomChange(Number(next.toFixed(2)));
+      onZoomActivity();
+    },
+    [onZoomActivity, onZoomChange, zoom],
+  );
 
   return (
-    <div ref={containerRef} className="relative h-full w-full">
-      <EditorMirror
-        content={content}
-        zoom={zoom}
-        fontSize={BASE_FONT_SIZE}
-        lineHeight={LINE_HEIGHT}
-        paddingX={EDITOR_PADDING_X}
-        paddingY={paddingY}
-        scrollTop={localScrollTop}
-        scrollLeft={localScrollLeft}
-      />
-
-      <textarea
-        ref={textareaRef}
-        className="editor-textarea totline-scroll relative z-10 font-mono"
-        value={content}
-        spellCheck={false}
-        placeholder="Comece a escrever…"
-        onChange={handleChange}
-        onSelect={handleSelect}
-        onScroll={handleScroll}
-        onWheel={handleWheel}
-        onKeyDown={handleKeyDown}
-        onPaste={handlePaste}
-        style={{
-          fontSize: `${fontSize}px`,
-          lineHeight: LINE_HEIGHT,
-          padding: `${paddingY}px ${EDITOR_PADDING_X}px`,
-        }}
-      />
-
-      <CheckboxOverlay
-        content={content}
-        zoom={zoom}
-        fontSize={BASE_FONT_SIZE}
-        lineHeight={BASE_FONT_SIZE * LINE_HEIGHT}
-        paddingTop={paddingY}
-        paddingLeft={EDITOR_PADDING_X}
-        editorWidth={editorWidth}
-        scrollTop={localScrollTop}
-        onToggle={handleToggleCheckbox}
-      />
-    </div>
+    <div
+      ref={hostRef}
+      className="cm-editor-host h-full w-full"
+      onWheel={handleWheel}
+      style={
+        {
+          "--editor-font-size": `${fontSize}px`,
+          "--editor-line-height": LINE_HEIGHT,
+          "--editor-padding-x": `${EDITOR_PADDING_X}px`,
+          "--editor-shift-y": `${paddingY}px`,
+          "--editor-padding-bottom": `${EDITOR_PADDING_Y}px`,
+          height: `calc(100% - ${paddingY}px)`,
+          transform: `translateY(${paddingY}px)`,
+          transition: "height 220ms ease, transform 220ms ease",
+        } as React.CSSProperties
+      }
+    />
   );
+}
+
+function createExtensions(
+  callbacksRef: React.MutableRefObject<{
+    onContentChange: (content: string) => void;
+    onCursorChange: (cursor: number) => void;
+    onSelectionChange: (start: number, end: number) => void;
+  }>,
+): Extension[] {
+  return [
+    history(),
+    drawSelection(),
+    EditorView.lineWrapping,
+    EditorState.tabSize.of(8),
+    keymap.of([
+      { key: "Tab", run: insertTab },
+      { key: "Backspace", run: deleteHiddenSyntaxBeforeCursor },
+      ...historyKeymap,
+    ]),
+    EditorView.updateListener.of((update) => {
+      if (update.docChanged) {
+        callbacksRef.current.onContentChange(update.state.doc.toString());
+      }
+
+      if (update.selectionSet || update.docChanged) {
+        const selection = update.state.selection.main;
+        callbacksRef.current.onCursorChange(selection.head);
+        callbacksRef.current.onSelectionChange(selection.from, selection.to);
+      }
+    }),
+    EditorView.theme({
+      "&": {
+        height: "100%",
+        width: "100%",
+        background: "transparent",
+        color: "rgb(var(--tone-rgb) / 0.9)",
+        fontSize: "var(--editor-font-size)",
+      },
+      ".cm-scroller": {
+        fontFamily: "Cascadia Code, Consolas, ui-monospace, monospace",
+        lineHeight: "var(--editor-line-height)",
+        background: "transparent",
+        overflow: "auto",
+        scrollbarWidth: "thin",
+        scrollbarColor: "rgb(var(--tone-soft-rgb) / 0.36) transparent",
+        padding: "0 var(--editor-padding-x)",
+      },
+      ".cm-content": {
+        minHeight: "100%",
+        padding: "0 0 var(--editor-padding-bottom)",
+        caretColor: "rgb(var(--tone-rgb) / 0.98)",
+      },
+      ".cm-line": {
+        padding: "0",
+      },
+      ".cm-focused": {
+        outline: "none",
+      },
+      ".cm-cursor": {
+        borderLeftColor: "rgb(var(--tone-rgb) / 0.98)",
+        borderLeftWidth: "1px",
+        boxShadow: "0 0 10px rgb(var(--tone-rgb) / 0.28)",
+      },
+      ".cm-selectionBackground, &.cm-focused .cm-selectionBackground": {
+        background: "rgb(var(--tone-accent-rgb) / 0.34)",
+      },
+      ".cm-bold-text": {
+        color: "rgb(var(--tone-rgb) / 0.98)",
+        fontWeight: "700",
+      },
+      ".cm-completed-text": {
+        color: "rgb(var(--tone-soft-rgb) / 0.62)",
+        textDecoration: "line-through",
+        textDecorationColor: "rgb(var(--tone-soft-rgb) / 0.58)",
+      },
+      ".cm-checkbox-slot": {
+        boxSizing: "border-box",
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        width: "0.72em",
+        height: "calc(var(--editor-font-size) * var(--editor-line-height))",
+        marginRight: "0.42em",
+        verticalAlign: "top",
+      },
+      ".cm-checkbox-widget": {
+        appearance: "none",
+        boxSizing: "border-box",
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        width: "0.72em",
+        height: "0.72em",
+        padding: "0",
+        borderRadius: "3px",
+        border: "1px solid rgb(var(--tone-soft-rgb) / 0.46)",
+        background: "rgb(var(--tone-accent-rgb) / 0.08)",
+        color: "rgb(var(--tone-rgb) / 0.72)",
+        backdropFilter: "blur(14px) saturate(1.08)",
+        cursor: "pointer",
+        font: "inherit",
+        lineHeight: "0",
+      },
+      ".cm-checkbox-widget[data-checked='true']": {
+        borderColor: "rgb(var(--tone-rgb) / 0.68)",
+        background: "rgb(var(--tone-accent-rgb) / 0.18)",
+        boxShadow:
+          "inset 0 1px 0 rgb(var(--tone-rgb) / 0.24), 0 0 18px rgb(var(--tone-soft-rgb) / 0.12)",
+      },
+      ".cm-checkbox-widget svg": {
+        display: "block",
+        opacity: "0",
+        transition: "opacity 120ms ease",
+      },
+      ".cm-checkbox-widget[data-checked='true'] svg": {
+        opacity: "1",
+      },
+      ".cm-placeholder": {
+        color: "var(--text-muted)",
+      },
+      ".cm-lineNumbers, .cm-gutters": {
+        display: "none",
+      },
+    }),
+    editorDecorations,
+    placeholderExtension("Comece a escrever..."),
+  ];
+}
+
+const editorDecorations = ViewPlugin.fromClass(
+  class {
+    decorations: DecorationSet;
+
+    constructor(view: EditorView) {
+      this.decorations = buildDecorations(view);
+    }
+
+    update(update: ViewUpdate) {
+      if (
+        update.docChanged ||
+        update.viewportChanged ||
+        update.selectionSet
+      ) {
+        this.decorations = buildDecorations(update.view);
+      }
+    }
+  },
+  {
+    decorations: (plugin) => plugin.decorations,
+  },
+);
+
+function buildDecorations(view: EditorView): DecorationSet {
+  const builder = new RangeSetBuilder<Decoration>();
+
+  for (const { from, to } of view.visibleRanges) {
+    let pos = from;
+    while (pos <= to) {
+      const line = view.state.doc.lineAt(pos);
+      decorateLine(builder, line.from, line.text);
+      pos = line.to + 1;
+      if (pos > view.state.doc.length) break;
+    }
+  }
+
+  return builder.finish();
+}
+
+function decorateLine(
+  builder: RangeSetBuilder<Decoration>,
+  lineFrom: number,
+  text: string,
+) {
+  const checkbox = text.match(/^(\s*)\[([ xX])\](.*)$/);
+  const contentOffset = checkbox
+    ? checkbox[1].length + 3
+    : 0;
+
+  if (checkbox) {
+    const checkboxFrom = lineFrom + checkbox[1].length;
+    const checked = checkbox[2].toLowerCase() === "x";
+    builder.add(
+      checkboxFrom,
+      checkboxFrom + 3,
+      Decoration.replace({
+        widget: new CheckboxWidget(checked, checkboxFrom),
+      }),
+    );
+
+    if (checked) {
+      builder.add(
+        checkboxFrom + 3,
+        lineFrom + text.length,
+        Decoration.mark({ class: "cm-completed-text" }),
+      );
+    }
+  }
+
+  decorateBold(builder, lineFrom, text, contentOffset);
+}
+
+function decorateBold(
+  builder: RangeSetBuilder<Decoration>,
+  lineFrom: number,
+  text: string,
+  startAt: number,
+) {
+  const firstContentIndex = findFirstContentIndex(text, startAt);
+
+  if (firstContentIndex !== -1 && text[firstContentIndex] === "*") {
+    const close = text.indexOf("*", firstContentIndex + 1);
+    if (close === -1) {
+      builder.add(
+        lineFrom + firstContentIndex,
+        lineFrom + firstContentIndex + 1,
+        Decoration.replace({}),
+      );
+      if (firstContentIndex + 1 < text.length) {
+        builder.add(
+          lineFrom + firstContentIndex + 1,
+          lineFrom + text.length,
+          Decoration.mark({ class: "cm-bold-text" }),
+        );
+      }
+      return;
+    }
+  }
+
+  let cursor = startAt;
+  while (cursor < text.length) {
+    const open = text.indexOf("*", cursor);
+    if (open === -1) break;
+
+    const close = text.indexOf("*", open + 1);
+    if (close === -1) break;
+
+    builder.add(lineFrom + open, lineFrom + open + 1, Decoration.replace({}));
+    if (open + 1 < close) {
+      builder.add(
+        lineFrom + open + 1,
+        lineFrom + close,
+        Decoration.mark({ class: "cm-bold-text" }),
+      );
+    }
+    builder.add(lineFrom + close, lineFrom + close + 1, Decoration.replace({}));
+    cursor = close + 1;
+  }
+}
+
+function findFirstContentIndex(text: string, startAt: number): number {
+  for (let index = startAt; index < text.length; index += 1) {
+    if (!/\s/.test(text[index])) return index;
+  }
+  return -1;
+}
+
+class CheckboxWidget extends WidgetType {
+  constructor(
+    private readonly checked: boolean,
+    private readonly from: number,
+  ) {
+    super();
+  }
+
+  eq(other: CheckboxWidget) {
+    return other.checked === this.checked && other.from === this.from;
+  }
+
+  toDOM(view: EditorView) {
+    const slot = document.createElement("span");
+    slot.className = "cm-checkbox-slot";
+
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "cm-checkbox-widget";
+    button.dataset.checked = String(this.checked);
+    button.setAttribute(
+      "aria-label",
+      this.checked ? "Marcar como pendente" : "Marcar como concluida",
+    );
+
+    button.innerHTML =
+      '<svg viewBox="0 0 12 12" width="55%" height="55%" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 6.2 5 8.7 9.5 3.8"/></svg>';
+
+    button.addEventListener("mousedown", (event) => {
+      event.preventDefault();
+    });
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      view.dispatch({
+        changes: {
+          from: this.from + 1,
+          to: this.from + 2,
+          insert: this.checked ? " " : "x",
+        },
+        selection: { anchor: this.from + 3 },
+      });
+      view.focus();
+    });
+
+    slot.appendChild(button);
+    return slot;
+  }
+
+  ignoreEvent() {
+    return false;
+  }
+}
+
+function placeholderExtension(text: string): Extension {
+  return EditorView.decorations.compute(["doc"], (state) => {
+    if (state.doc.length > 0) return Decoration.none;
+    return Decoration.set([
+      Decoration.widget({
+        widget: new PlaceholderWidget(text),
+        side: 1,
+      }).range(0),
+    ]);
+  });
+}
+
+class PlaceholderWidget extends WidgetType {
+  constructor(private readonly text: string) {
+    super();
+  }
+
+  toDOM() {
+    const span = document.createElement("span");
+    span.className = "cm-placeholder";
+    span.textContent = this.text;
+    return span;
+  }
+}
+
+function deleteHiddenSyntaxBeforeCursor(view: EditorView): boolean {
+  const selection = view.state.selection.main;
+  if (!selection.empty) return false;
+
+  const head = selection.head;
+  const previous = head > 0 ? view.state.doc.sliceString(head - 1, head) : "";
+  const next =
+    head < view.state.doc.length
+      ? view.state.doc.sliceString(head, head + 1)
+      : "";
+
+  if (previous === "*" && isHiddenBoldMarker(view, head - 1)) {
+    view.dispatch({
+      changes: { from: head - 1, to: head },
+      selection: { anchor: head - 1 },
+    });
+    return true;
+  }
+
+  if (next === "*" && isHiddenBoldMarker(view, head)) {
+    view.dispatch({
+      changes: { from: head, to: head + 1 },
+      selection: { anchor: head },
+    });
+    return true;
+  }
+
+  const line = view.state.doc.lineAt(selection.head);
+  const beforeCursor = view.state.doc.sliceString(line.from, selection.head);
+  if (/(^|\s)\[([ xX])\]$/.test(beforeCursor)) {
+    view.dispatch({
+      changes: { from: head - 1, to: head },
+      selection: { anchor: head - 1 },
+    });
+    return true;
+  }
+
+  const afterCursor = view.state.doc.sliceString(line.from, head + 1);
+  if (next === "]" && /(^|\s)\[([ xX])\]$/.test(afterCursor)) {
+    view.dispatch({
+      changes: { from: head, to: head + 1 },
+      selection: { anchor: head },
+    });
+    return true;
+  }
+
+  return false;
+}
+
+function isHiddenBoldMarker(view: EditorView, position: number): boolean {
+  const line = view.state.doc.lineAt(position);
+  const text = line.text;
+  const relative = position - line.from;
+  const firstContentIndex = findFirstContentIndex(text, 0);
+
+  if (relative === firstContentIndex && text[relative] === "*") {
+    const close = text.indexOf("*", relative + 1);
+    if (close === -1) return true;
+  }
+
+  let cursor = 0;
+  while (cursor < text.length) {
+    const open = text.indexOf("*", cursor);
+    if (open === -1) return false;
+
+    const close = text.indexOf("*", open + 1);
+    if (close === -1) return false;
+
+    if (relative === open || relative === close) return true;
+    cursor = close + 1;
+  }
+
+  return false;
 }
 
 function clamp(value: number, min: number, max: number): number {
