@@ -137,6 +137,7 @@ npm run tauri:build
 | `npm run tauri` | Runs the Tauri CLI through the project wrapper. |
 | `npm run tauri:dev` | Starts the Tauri desktop app in development mode. |
 | `npm run tauri:build` | Builds the Tauri desktop app. |
+| `npm run release:tag -- v0.1.1` | Updates release versions, commits them, creates a tag, and pushes the release tag. |
 
 ## Build Artifacts
 
@@ -231,7 +232,21 @@ The validation job runs on Windows and checks the application with:
 
 On pushes to `main`, the workflow also builds the Tauri desktop app and uploads the Windows executable and installer packages as GitHub Actions artifacts.
 
-The release workflow runs when a version tag is pushed:
+The release workflow runs when a version tag is pushed. The recommended way to publish a release tag is:
+
+```bash
+npm run release:tag -- v0.1.1
+```
+
+The command updates `package.json`, `package-lock.json`, and `src-tauri/tauri.conf.json`, creates a release commit, creates an annotated Git tag, pushes `main`, and pushes the tag to GitHub.
+
+To preview the operation without changing files or pushing anything:
+
+```bash
+npm run release:tag -- v0.1.1 --dry-run
+```
+
+If the version files were already updated and committed manually, the tag-only trigger is:
 
 ```bash
 git tag v0.1.0
