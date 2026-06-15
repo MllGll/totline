@@ -7,12 +7,12 @@ export function HelpOverlay({ visible, onClose }: HelpOverlayProps) {
   if (!visible) return null;
 
   const shortcuts = [
-    ["Esc", "Ocultar janela"],
+    ["Esc", "Minimize window"],
     ["Ctrl", "+", "Scroll", "Zoom"],
-    ["Ctrl", "+", "0", "Resetar zoom"],
-    ["[ ]", "/ [x]", "Tarefas"],
-    ["*texto*", "Negrito"],
-    ["*linha", "Linha em negrito"],
+    ["Ctrl", "+", "0", "Reset zoom"],
+    ["[ ]", "/ [x]", "Tasks"],
+    ["*text*", "Bold"],
+    ["*line", "Bold line"],
   ];
 
   return (
@@ -42,9 +42,9 @@ export function HelpOverlay({ visible, onClose }: HelpOverlayProps) {
         </div>
 
         <div className="mt-4 text-center">
-          <h2 className="tone-title text-sm font-medium">Ajuda rapida</h2>
+          <h2 className="tone-title text-sm font-medium">Quick Help</h2>
           <p className="tone-copy-dim mt-1 text-[11px]">
-            Minimalista, persistente, sempre disponivel.
+            Minimal, persistent, always available.
           </p>
         </div>
 
@@ -85,12 +85,12 @@ export function HelpOverlay({ visible, onClose }: HelpOverlayProps) {
 
         <div className="tone-divider mt-7 border-t pt-5">
           <p className="tone-copy-dim text-[11px] leading-relaxed">
-            Um unico caderno infinito. Sem arquivos, sem estrutura visivel,
-            apenas memoria em texto.
+            One endless notebook. No files, no visible structure, just memory
+            in text.
           </p>
           <p className="tone-copy-dim mt-3 text-[11px] leading-relaxed">
-            Esc e o botao de ocultar apenas tiram a janela da frente. O app
-            continua ativo em segundo plano.
+            Esc and the minimize button only move the window out of the way.
+            The app keeps running in the background.
           </p>
         </div>
 
@@ -98,7 +98,7 @@ export function HelpOverlay({ visible, onClose }: HelpOverlayProps) {
           onClick={onClose}
           className="tone-button mt-6 w-full rounded-full border px-4 py-2 text-xs transition-colors"
         >
-          Fechar
+          Close
         </button>
       </div>
     </div>

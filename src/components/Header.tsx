@@ -43,8 +43,8 @@ export function Header({
             "app-header-button",
             alwaysOnTop ? "app-header-button-active" : "",
           ].join(" ")}
-          title="Sempre visível"
-          aria-label="Sempre visível"
+          title="Always on top"
+          aria-label="Always on top"
         >
           <svg
             viewBox="0 0 16 16"
@@ -66,8 +66,8 @@ export function Header({
           type="button"
           onClick={onHelp}
           className="app-header-button"
-          title="Ajuda"
-          aria-label="Ajuda"
+          title="Help"
+          aria-label="Help"
         >
           ?
         </button>
@@ -76,8 +76,8 @@ export function Header({
           type="button"
           onClick={onClose}
           className="app-header-button"
-          title="Ocultar"
-          aria-label="Ocultar"
+          title="Minimize"
+          aria-label="Minimize"
         >
           <svg
             viewBox="0 0 16 16"

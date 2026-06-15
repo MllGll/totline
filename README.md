@@ -1,53 +1,57 @@
 # TOTLINE
 
-Companheiro de escrita persistente para desktop — superfície contínua, sem arquivos, com autosave invisível.
+Desktop writing companion: one continuous, persistent text surface with invisible autosave.
 
 ## Stack
 
-- **Tauri 2** — runtime desktop
-- **React + TypeScript + Vite** — frontend
-- **TailwindCSS** — estilos
-- **SQLite** — persistência local
+- Tauri 2: desktop runtime
+- React + TypeScript + Vite: frontend
+- TailwindCSS: styling
+- SQLite: local persistence
 
-## Desenvolvimento
+## Development
 
-Pré-requisitos: Node.js 18+, Rust (stable), **Visual Studio Build Tools** (C++), WebView2 no Windows.
+Prerequisites: Node.js 18+, Rust stable, Visual Studio Build Tools with C++, and WebView2 on Windows.
 
 ```bash
 npm install
 npm run tauri:dev
 ```
 
-> **Git Bash / MINGW64:** use `npm run tauri:dev` (configura Cargo e MSVC no PATH automaticamente).  
-> Alternativa permanente no Git Bash: `echo 'export PATH="$HOME/.cargo/bin:$PATH"' >> ~/.bashrc`
-
-> **Nota Windows:** se `link.exe` não for encontrado, instale [Build Tools for Visual Studio](https://visualstudio.microsoft.com/visual-cpp-build-tools/) com a carga "Desktop development with C++".
-
-## Produção
+## Production
 
 ```bash
 npm run tauri:build
 ```
 
-## Atalhos e comportamento
+## Behavior
 
-| Ação | Comportamento |
-|------|----------------|
-| **Esc** | Minimiza a janela |
-| **Fechar (×)** | Oculta para a bandeja do sistema |
-| **Ctrl + scroll** | Zoom do editor |
-| **Ctrl + 0** | Restaura zoom para 100% |
-| **Topo da janela (hover)** | Revela o header com controles |
-| **Bandeja → Sair** | Flush + grava antes de encerrar |
+| Action | Behavior |
+| --- | --- |
+| Esc | Minimizes the window |
+| Header hide button | Minimizes the window |
+| Window close event | Hides the window to the system tray |
+| Tray -> Show TOTLINE | Restores and focuses the window |
+| Tray -> Quit | Saves state and exits |
+| Ctrl + scroll | Changes editor zoom |
+| Ctrl + 0 | Resets editor zoom to 100% |
+| Hover near the top edge | Reveals the tiny header |
 
-## Preferência de startup
+## Startup Preference
 
-Se a janela estava oculta na bandeja ao fechar, o app **reabre oculto** na bandeja na próxima execução.
+If the app was hidden to the tray through the window close event, it stays hidden on the next launch until restored from the tray.
 
-## Checkboxes
+## Plain Text Syntax
 
-Linhas no formato `[ ] tarefa` ou `- [x] concluída` recebem checkboxes interativos. O conteúdo permanece texto puro internamente.
+TOTLINE keeps the document as plain text and renders a few lightweight affordances:
 
-## Filosofia
+| Syntax | Rendering |
+| --- | --- |
+| `[ ] task` | Interactive unchecked checkbox |
+| `[x] task` | Interactive checked checkbox |
+| `*text*` | Bold text segment |
+| `*line` | Bold line |
 
-Um único documento contínuo. Sem pastas, abas ou exportação. Persistência automática a cada ~500ms.
+## Philosophy
+
+One endless notebook. No files, tabs, dashboards, or document management. Just a calm floating surface for memory and writing.

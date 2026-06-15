@@ -22,6 +22,11 @@ import {
   type DecorationSet,
   type ViewUpdate,
 } from "@codemirror/view";
+import {
+  findBoldRanges,
+  hiddenSyntaxDeletion,
+  parseCheckboxSyntax,
+} from "../lib/editorSyntax";
 
 interface EditorProps {
   content: string;
@@ -332,7 +337,7 @@ function createExtensions(
       },
     }),
     editorDecorations,
-    placeholderExtension("Comece a escrever..."),
+    placeholderExtension("Start writing..."),
   ];
 }
 
@@ -380,25 +385,22 @@ function decorateLine(
   lineFrom: number,
   text: string,
 ) {
-  const checkbox = text.match(/^(\s*)\[([ xX])\](.*)$/);
-  const contentOffset = checkbox
-    ? checkbox[1].length + 3
-    : 0;
+  const checkbox = parseCheckboxSyntax(text);
+  const contentOffset = checkbox ? checkbox.contentFrom : 0;
 
   if (checkbox) {
-    const checkboxFrom = lineFrom + checkbox[1].length;
-    const checked = checkbox[2].toLowerCase() === "x";
+    const checkboxFrom = lineFrom + checkbox.from;
     builder.add(
       checkboxFrom,
-      checkboxFrom + 3,
+      lineFrom + checkbox.to,
       Decoration.replace({
-        widget: new CheckboxWidget(checked, checkboxFrom),
+        widget: new CheckboxWidget(checkbox.checked, checkboxFrom),
       }),
     );
 
-    if (checked) {
+    if (checkbox.checked) {
       builder.add(
-        checkboxFrom + 3,
+        lineFrom + checkbox.contentFrom,
         lineFrom + text.length,
         Decoration.mark({ class: "cm-completed-text" }),
       );
@@ -414,53 +416,27 @@ function decorateBold(
   text: string,
   startAt: number,
 ) {
-  const firstContentIndex = findFirstContentIndex(text, startAt);
-
-  if (firstContentIndex !== -1 && text[firstContentIndex] === "*") {
-    const close = text.indexOf("*", firstContentIndex + 1);
-    if (close === -1) {
+  for (const range of findBoldRanges(text, startAt)) {
+    builder.add(
+      lineFrom + range.markerFrom,
+      lineFrom + range.markerFrom + 1,
+      Decoration.replace({}),
+    );
+    if (range.textFrom < range.textTo) {
       builder.add(
-        lineFrom + firstContentIndex,
-        lineFrom + firstContentIndex + 1,
-        Decoration.replace({}),
-      );
-      if (firstContentIndex + 1 < text.length) {
-        builder.add(
-          lineFrom + firstContentIndex + 1,
-          lineFrom + text.length,
-          Decoration.mark({ class: "cm-bold-text" }),
-        );
-      }
-      return;
-    }
-  }
-
-  let cursor = startAt;
-  while (cursor < text.length) {
-    const open = text.indexOf("*", cursor);
-    if (open === -1) break;
-
-    const close = text.indexOf("*", open + 1);
-    if (close === -1) break;
-
-    builder.add(lineFrom + open, lineFrom + open + 1, Decoration.replace({}));
-    if (open + 1 < close) {
-      builder.add(
-        lineFrom + open + 1,
-        lineFrom + close,
+        lineFrom + range.textFrom,
+        lineFrom + range.textTo,
         Decoration.mark({ class: "cm-bold-text" }),
       );
     }
-    builder.add(lineFrom + close, lineFrom + close + 1, Decoration.replace({}));
-    cursor = close + 1;
+    if (range.markerTo !== undefined) {
+      builder.add(
+        lineFrom + range.markerTo,
+        lineFrom + range.markerTo + 1,
+        Decoration.replace({}),
+      );
+    }
   }
-}
-
-function findFirstContentIndex(text: string, startAt: number): number {
-  for (let index = startAt; index < text.length; index += 1) {
-    if (!/\s/.test(text[index])) return index;
-  }
-  return -1;
 }
 
 class CheckboxWidget extends WidgetType {
@@ -485,7 +461,7 @@ class CheckboxWidget extends WidgetType {
     button.dataset.checked = String(this.checked);
     button.setAttribute(
       "aria-label",
-      this.checked ? "Marcar como pendente" : "Marcar como concluida",
+      this.checked ? "Mark as pending" : "Mark as complete",
     );
 
     button.innerHTML =
@@ -546,71 +522,15 @@ function deleteHiddenSyntaxBeforeCursor(view: EditorView): boolean {
   if (!selection.empty) return false;
 
   const head = selection.head;
-  const previous = head > 0 ? view.state.doc.sliceString(head - 1, head) : "";
-  const next =
-    head < view.state.doc.length
-      ? view.state.doc.sliceString(head, head + 1)
-      : "";
-
-  if (previous === "*" && isHiddenBoldMarker(view, head - 1)) {
-    view.dispatch({
-      changes: { from: head - 1, to: head },
-      selection: { anchor: head - 1 },
-    });
-    return true;
-  }
-
-  if (next === "*" && isHiddenBoldMarker(view, head)) {
-    view.dispatch({
-      changes: { from: head, to: head + 1 },
-      selection: { anchor: head },
-    });
-    return true;
-  }
-
   const line = view.state.doc.lineAt(selection.head);
-  const beforeCursor = view.state.doc.sliceString(line.from, selection.head);
-  if (/(^|\s)\[([ xX])\]$/.test(beforeCursor)) {
+  const deletion = hiddenSyntaxDeletion(line.text, head - line.from);
+  if (deletion) {
+    const from = line.from + deletion.from;
     view.dispatch({
-      changes: { from: head - 1, to: head },
-      selection: { anchor: head - 1 },
+      changes: { from, to: line.from + deletion.to },
+      selection: { anchor: from },
     });
     return true;
-  }
-
-  const afterCursor = view.state.doc.sliceString(line.from, head + 1);
-  if (next === "]" && /(^|\s)\[([ xX])\]$/.test(afterCursor)) {
-    view.dispatch({
-      changes: { from: head, to: head + 1 },
-      selection: { anchor: head },
-    });
-    return true;
-  }
-
-  return false;
-}
-
-function isHiddenBoldMarker(view: EditorView, position: number): boolean {
-  const line = view.state.doc.lineAt(position);
-  const text = line.text;
-  const relative = position - line.from;
-  const firstContentIndex = findFirstContentIndex(text, 0);
-
-  if (relative === firstContentIndex && text[relative] === "*") {
-    const close = text.indexOf("*", relative + 1);
-    if (close === -1) return true;
-  }
-
-  let cursor = 0;
-  while (cursor < text.length) {
-    const open = text.indexOf("*", cursor);
-    if (open === -1) return false;
-
-    const close = text.indexOf("*", open + 1);
-    if (close === -1) return false;
-
-    if (relative === open || relative === close) return true;
-    cursor = close + 1;
   }
 
   return false;

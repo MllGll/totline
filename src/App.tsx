@@ -1,6 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { listen } from "@tauri-apps/api/event";
-import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Editor } from "./components/Editor";
 import { Header, useHeaderReveal } from "./components/Header";
 import { HelpOverlay } from "./components/HelpOverlay";
@@ -15,6 +13,7 @@ import {
   saveWindowState,
   setAlwaysOnTop,
 } from "./lib/tauri";
+import { getAppWindow, listenAppEvent } from "./lib/tauriRuntime";
 import type { AppState } from "./types";
 import { DEFAULT_STATE } from "./types";
 
@@ -59,9 +58,9 @@ export default function App() {
   }, AUTOSAVE_MS);
 
   const persistWindowNow = useCallback(async () => {
-    const window = getCurrentWindow();
-    const position = await window.outerPosition();
-    const size = await window.outerSize();
+    const appWindow = getAppWindow();
+    const position = await appWindow.outerPosition();
+    const size = await appWindow.outerSize();
     await saveWindowState({
       x: position.x,
       y: position.y,
@@ -96,10 +95,10 @@ export default function App() {
   useEffect(() => {
     if (!ready) return;
 
-    const unlistenHide = listen("totline-hide", () => {
+    const unlistenHide = listenAppEvent("totline-hide", () => {
       void handleHideToTray();
     });
-    const unlistenQuit = listen("totline-quit", () => {
+    const unlistenQuit = listenAppEvent("totline-quit", () => {
       void handleQuit();
     });
 
@@ -129,19 +128,19 @@ export default function App() {
   useEffect(() => {
     if (!ready) return;
 
-    const window = getCurrentWindow();
+    const appWindow = getAppWindow();
     let resizeTimer: number | null = null;
 
     const persistWindow = () => {
       void persistWindowNow();
     };
 
-    const unlistenMove = window.onMoved(() => {
+    const unlistenMove = appWindow.onMoved(() => {
       if (resizeTimer) clearTimeout(resizeTimer);
       resizeTimer = setTimeout(persistWindow, 300);
     });
 
-    const unlistenResize = window.onResized(() => {
+    const unlistenResize = appWindow.onResized(() => {
       if (resizeTimer) clearTimeout(resizeTimer);
       resizeTimer = setTimeout(persistWindow, 300);
     });
@@ -157,18 +156,6 @@ export default function App() {
     void minimizeWindow();
   }, []);
 
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        handleMinimize();
-      }
-    };
-
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [handleMinimize]);
-
   const showZoomHud = useCallback(() => {
     setZoomHudVisible(true);
     if (zoomHudTimer.current !== null) {
@@ -179,10 +166,29 @@ export default function App() {
     }, ZOOM_HUD_MS);
   }, []);
 
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key === "0") {
+        event.preventDefault();
+        updateState({ zoom: DEFAULT_STATE.zoom });
+        showZoomHud();
+        return;
+      }
+
+      if (event.key === "Escape") {
+        event.preventDefault();
+        handleMinimize();
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [handleMinimize, showZoomHud, updateState]);
+
   if (!ready) {
     return (
       <div className="flex h-full w-full items-center justify-center text-sm text-zinc-400">
-        Restaurando…
+        Restoring...
       </div>
     );
   }

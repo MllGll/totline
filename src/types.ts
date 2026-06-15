@@ -8,7 +8,7 @@ export interface AppState {
   zoom: number;
   theme: string;
   alwaysOnTop: boolean;
-  /** Restaura visibilidade da janela na próxima abertura (startup preference). */
+  /** Restores window visibility on the next launch (startup preference). */
   lastWindowVisible: boolean;
 }
 

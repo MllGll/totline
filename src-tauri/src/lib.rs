@@ -199,6 +199,25 @@ fn visible_geometry(
     window: &tauri::WebviewWindow,
     state: &WindowState,
 ) -> (tauri::PhysicalPosition<i32>, tauri::PhysicalSize<u32>) {
+    let monitors = window.available_monitors().unwrap_or_default();
+    let areas: Vec<_> = monitors
+        .iter()
+        .map(|monitor| monitor.work_area().clone())
+        .collect();
+    let primary_area = window
+        .primary_monitor()
+        .ok()
+        .flatten()
+        .map(|monitor| monitor.work_area().clone());
+
+    resolve_visible_geometry(state, &areas, primary_area.as_ref())
+}
+
+fn resolve_visible_geometry(
+    state: &WindowState,
+    areas: &[tauri::PhysicalRect<i32, u32>],
+    primary_area: Option<&tauri::PhysicalRect<i32, u32>>,
+) -> (tauri::PhysicalPosition<i32>, tauri::PhysicalSize<u32>) {
     const MIN_VISIBLE_PX: i32 = 96;
 
     let fallback_size = tauri::PhysicalSize {
@@ -214,13 +233,11 @@ fn visible_geometry(
         y: state.y,
     };
 
-    let monitors = window.available_monitors().unwrap_or_default();
-    if monitors.is_empty() {
+    if areas.is_empty() {
         return (requested_position, requested_size);
     }
 
-    for monitor in &monitors {
-        let area = monitor.work_area();
+    for area in areas {
         if rects_overlap_enough(
             requested_position.x,
             requested_position.y,
@@ -237,15 +254,9 @@ fn visible_geometry(
         }
     }
 
-    let monitor = window
-        .primary_monitor()
-        .ok()
-        .flatten()
-        .or_else(|| monitors.first().cloned());
-    let Some(monitor) = monitor else {
+    let Some(area) = primary_area.or_else(|| areas.first()) else {
         return (requested_position, fallback_size);
     };
-    let area = monitor.work_area();
     let size = fit_size_to_area(requested_size, area.size);
     (center_position_in_area(size, area), size)
 }
@@ -308,6 +319,135 @@ fn rects_overlap_enough(
     overlap_width >= min_visible && overlap_height >= min_visible
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn rect(
+        x: i32,
+        y: i32,
+        width: u32,
+        height: u32,
+    ) -> tauri::PhysicalRect<i32, u32> {
+        tauri::PhysicalRect {
+            position: tauri::PhysicalPosition { x, y },
+            size: tauri::PhysicalSize { width, height },
+        }
+    }
+
+    fn window_state(x: i32, y: i32, width: f64, height: f64) -> WindowState {
+        WindowState {
+            x,
+            y,
+            width,
+            height,
+        }
+    }
+
+    #[test]
+    fn keeps_visible_window_on_screen() {
+        let area = rect(0, 0, 1920, 1080);
+        let state = window_state(120, 80, 480.0, 640.0);
+
+        let (position, size) = resolve_visible_geometry(&state, &[area], Some(&area));
+
+        assert_eq!(position.x, 120);
+        assert_eq!(position.y, 80);
+        assert_eq!(size.width, 480);
+        assert_eq!(size.height, 640);
+    }
+
+    #[test]
+    fn recenters_window_when_saved_position_is_offscreen() {
+        let area = rect(0, 0, 1920, 1080);
+        let state = window_state(5000, 5000, 480.0, 640.0);
+
+        let (position, size) = resolve_visible_geometry(&state, &[area], Some(&area));
+
+        assert_eq!(size.width, 480);
+        assert_eq!(size.height, 640);
+        assert_eq!(position.x, 720);
+        assert_eq!(position.y, 220);
+    }
+
+    #[test]
+    fn clamps_partially_visible_window_into_work_area() {
+        let area = rect(0, 0, 1920, 1080);
+        let state = window_state(1800, 100, 480.0, 640.0);
+
+        let (position, size) = resolve_visible_geometry(&state, &[area], Some(&area));
+
+        assert_eq!(size.width, 480);
+        assert_eq!(size.height, 640);
+        assert_eq!(position.x, 1440);
+        assert_eq!(position.y, 100);
+    }
+
+    #[test]
+    fn honors_secondary_monitor_when_window_is_visible_there() {
+        let primary = rect(0, 0, 1920, 1080);
+        let secondary = rect(1920, 0, 1280, 1024);
+        let state = window_state(2100, 120, 520.0, 600.0);
+
+        let (position, size) =
+            resolve_visible_geometry(&state, &[primary, secondary], Some(&primary));
+
+        assert_eq!(size.width, 520);
+        assert_eq!(size.height, 600);
+        assert_eq!(position.x, 2100);
+        assert_eq!(position.y, 120);
+    }
+
+    #[test]
+    fn fits_oversized_window_to_work_area() {
+        let area = rect(0, 0, 1366, 768);
+        let state = window_state(100, 100, 2400.0, 1800.0);
+
+        let (position, size) = resolve_visible_geometry(&state, &[area], Some(&area));
+
+        assert_eq!(size.width, 1366);
+        assert_eq!(size.height, 768);
+        assert_eq!(position.x, 0);
+        assert_eq!(position.y, 0);
+    }
+
+    #[test]
+    fn clamps_saved_size_to_minimums() {
+        let area = rect(0, 0, 1920, 1080);
+        let state = window_state(100, 100, 100.0, 100.0);
+
+        let (position, size) = resolve_visible_geometry(&state, &[area], Some(&area));
+
+        assert_eq!(position.x, 100);
+        assert_eq!(position.y, 100);
+        assert_eq!(size.width, 320);
+        assert_eq!(size.height, 240);
+    }
+
+    #[test]
+    fn keeps_requested_geometry_when_monitor_data_is_unavailable() {
+        let state = window_state(-5000, 3000, 5000.0, 40.0);
+
+        let (position, size) = resolve_visible_geometry(&state, &[], None);
+
+        assert_eq!(position.x, -5000);
+        assert_eq!(position.y, 3000);
+        assert_eq!(size.width, 2400);
+        assert_eq!(size.height, 240);
+    }
+
+    #[test]
+    fn detects_required_visible_overlap() {
+        assert!(rects_overlap_enough(0, 0, 320, 240, 224, 144, 800, 600, 96));
+        assert!(!rects_overlap_enough(
+            0, 0, 320, 240, 225, 144, 800, 600, 96
+        ));
+        assert!(!rects_overlap_enough(
+            0, 0, 320, 240, 224, 145, 800, 600, 96
+        ));
+    }
+}
+
 fn restore_window(app: &AppHandle) -> Result<(), String> {
     let window = app
         .get_webview_window("main")
@@ -321,12 +461,13 @@ fn restore_window(app: &AppHandle) -> Result<(), String> {
         .map_err(|e| e.to_string())?
         .load_window_state()
         .unwrap_or_default();
-    let mut app_state = data
+    let app_state = data
         .db
         .lock()
         .map_err(|e| e.to_string())?
         .load_app_state()
         .unwrap_or_default();
+    let should_show_window = app_state.last_window_visible;
 
     let (position, size) = visible_geometry(&window, &window_state);
 
@@ -347,12 +488,10 @@ fn restore_window(app: &AppHandle) -> Result<(), String> {
         apply_window_effects(&window);
     }
 
-    app_state.last_window_visible = true;
-    let _ = data
-        .db
-        .lock()
-        .map_err(|e| e.to_string())?
-        .save_app_state(&app_state);
+    if !should_show_window {
+        let _ = window.hide();
+        return Ok(());
+    }
 
     let _ = window.show();
     let _ = window.unminimize();
@@ -362,8 +501,8 @@ fn restore_window(app: &AppHandle) -> Result<(), String> {
 }
 
 fn build_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
-    let show = MenuItem::with_id(app, "show", "Mostrar TOTLINE", true, None::<&str>)?;
-    let quit = MenuItem::with_id(app, "quit", "Sair", true, None::<&str>)?;
+    let show = MenuItem::with_id(app, "show", "Show TOTLINE", true, None::<&str>)?;
+    let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
     let menu = Menu::with_items(app, &[&show, &quit])?;
 
     let _tray = TrayIconBuilder::new()

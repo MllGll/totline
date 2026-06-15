@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::sync::Mutex;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AppState {
     pub content: String,
@@ -35,7 +35,7 @@ impl Default for AppState {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct WindowState {
     pub x: i32,
     pub y: i32,
@@ -68,6 +68,15 @@ impl Database {
         let conn = Connection::open(path)?;
         let db = Self {
             conn: Mutex::new(conn),
+        };
+        db.init()?;
+        Ok(db)
+    }
+
+    #[cfg(test)]
+    fn in_memory() -> rusqlite::Result<Self> {
+        let db = Self {
+            conn: Mutex::new(Connection::open_in_memory()?),
         };
         db.init()?;
         Ok(db)
@@ -193,4 +202,110 @@ impl Database {
 fn database_path() -> PathBuf {
     let base = dirs::data_dir().unwrap_or_else(|| PathBuf::from("."));
     base.join("totline").join("totline.db")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn initializes_default_app_state() {
+        let db = Database::in_memory().expect("in-memory database");
+
+        let state = db.load_app_state().expect("load app state");
+
+        assert_eq!(state, AppState::default());
+    }
+
+    #[test]
+    fn initializes_default_window_state() {
+        let db = Database::in_memory().expect("in-memory database");
+
+        let state = db.load_window_state().expect("load window state");
+
+        assert_eq!(state, WindowState::default());
+    }
+
+    #[test]
+    fn persists_complete_app_state() {
+        let db = Database::in_memory().expect("in-memory database");
+        let state = AppState {
+            content: "[x] capture\n*important* note".to_string(),
+            cursor: 12,
+            selection_start: 3,
+            selection_end: 12,
+            scroll_top: 320.5,
+            scroll_left: 8.25,
+            zoom: 1.35,
+            theme: "dark".to_string(),
+            always_on_top: false,
+            last_window_visible: false,
+        };
+
+        db.save_app_state(&state).expect("save app state");
+
+        assert_eq!(db.load_app_state().expect("load app state"), state);
+    }
+
+    #[test]
+    fn persists_window_state() {
+        let db = Database::in_memory().expect("in-memory database");
+        let state = WindowState {
+            x: -1920,
+            y: 72,
+            width: 860.5,
+            height: 700.25,
+        };
+
+        db.save_window_state(&state).expect("save window state");
+
+        assert_eq!(db.load_window_state().expect("load window state"), state);
+    }
+
+    #[test]
+    fn migrates_old_app_state_without_last_window_visible() {
+        let conn = Connection::open_in_memory().expect("in-memory connection");
+        conn.execute_batch(
+            "
+            CREATE TABLE app_state (
+                id INTEGER PRIMARY KEY CHECK (id = 1),
+                content TEXT NOT NULL DEFAULT '',
+                cursor INTEGER NOT NULL DEFAULT 0,
+                selection_start INTEGER NOT NULL DEFAULT 0,
+                selection_end INTEGER NOT NULL DEFAULT 0,
+                scroll_top REAL NOT NULL DEFAULT 0,
+                scroll_left REAL NOT NULL DEFAULT 0,
+                zoom REAL NOT NULL DEFAULT 1,
+                theme TEXT NOT NULL DEFAULT 'system',
+                always_on_top INTEGER NOT NULL DEFAULT 1
+            );
+
+            CREATE TABLE window_state (
+                id INTEGER PRIMARY KEY CHECK (id = 1),
+                x INTEGER NOT NULL DEFAULT 100,
+                y INTEGER NOT NULL DEFAULT 100,
+                width REAL NOT NULL DEFAULT 480,
+                height REAL NOT NULL DEFAULT 640
+            );
+
+            INSERT INTO app_state (
+                id, content, cursor, selection_start, selection_end,
+                scroll_top, scroll_left, zoom, theme, always_on_top
+            ) VALUES (1, 'old note', 4, 1, 4, 12, 2, 1.2, 'system', 0);
+            INSERT INTO window_state (id) VALUES (1);
+            ",
+        )
+        .expect("legacy schema");
+        let db = Database {
+            conn: Mutex::new(conn),
+        };
+
+        db.init().expect("migrate schema");
+        let state = db.load_app_state().expect("load migrated app state");
+
+        assert_eq!(state.content, "old note");
+        assert_eq!(state.cursor, 4);
+        assert!(!state.always_on_top);
+        assert!(state.last_window_visible);
+    }
 }

@@ -14,9 +14,17 @@ dist-ssr
 # Dependencies
 node_modules
 
+# Tests
+test-results
+playwright-report
+
 # Tauri
 src-tauri/target
 
 # OS
 .DS_Store
 Thumbs.db
+
+# TODO
+TODO.md
+
