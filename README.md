@@ -222,15 +222,14 @@ The test suite covers:
 
 GitHub Actions runs the CI workflow on pushes and pull requests targeting `main`.
 
-The validation job runs on Windows and checks the application with:
+The CI workflow runs on Windows and is split by validation type:
 
-- `npm run test`;
-- `npm run build`;
-- `npm run test:e2e`;
-- `cargo check`;
-- `cargo test`.
+- `frontend-tests`: runs `npm run test`;
+- `frontend-build`: runs `npm run build`;
+- `e2e-tests`: runs `npm run test:e2e`;
+- `rust-tests`: runs `cargo check` and `cargo test`.
 
-On pushes to `main`, the workflow also builds the Tauri desktop app and uploads the Windows executable and installer packages as GitHub Actions artifacts.
+On pushes to `main`, the `desktop-build` job waits for all validation jobs to pass, then builds the Tauri desktop app and uploads the Windows executable and installer packages as GitHub Actions artifacts.
 
 The release workflow runs when a version tag is pushed. The recommended way to publish a release tag is:
 

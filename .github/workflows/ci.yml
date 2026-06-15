@@ -17,10 +17,10 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  validate:
-    name: Validate app
+  frontend-tests:
+    name: Frontend tests
     runs-on: windows-latest
-    timeout-minutes: 35
+    timeout-minutes: 15
 
     steps:
       - name: Checkout repository
@@ -32,6 +32,78 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Run unit and integration tests
+        run: npm run test
+
+  frontend-build:
+    name: Frontend build
+    runs-on: windows-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build frontend
+        run: npm run build
+
+  e2e-tests:
+    name: Playwright E2E tests
+    runs-on: windows-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        run: npx playwright install chromium
+
+      - name: Run Playwright E2E tests
+        run: npm run test:e2e
+
+      - name: Upload Playwright diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-diagnostics
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+
+  rust-tests:
+    name: Rust and Tauri tests
+    runs-on: windows-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
@@ -47,21 +119,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-
 
-      - name: Install frontend dependencies
-        run: npm ci
-
-      - name: Install Playwright Chromium
-        run: npx playwright install chromium
-
-      - name: Run frontend unit and integration tests
-        run: npm run test
-
-      - name: Build frontend
-        run: npm run build
-
-      - name: Run Playwright E2E tests
-        run: npm run test:e2e
-
       - name: Check Rust and Tauri code
         working-directory: src-tauri
         run: cargo check
@@ -70,20 +127,14 @@ jobs:
         working-directory: src-tauri
         run: cargo test
 
-      - name: Upload Playwright diagnostics
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-diagnostics
-          path: |
-            playwright-report/
-            test-results/
-          if-no-files-found: ignore
-
   desktop-build:
     name: Build Windows desktop artifacts
     runs-on: windows-latest
-    needs: validate
+    needs:
+      - frontend-tests
+      - frontend-build
+      - e2e-tests
+      - rust-tests
     if: github.event_name == 'push'
     timeout-minutes: 60
 

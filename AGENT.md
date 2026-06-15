@@ -120,6 +120,14 @@ If a test cannot be run, state why and what risk remains.
 4. Do not document planned behavior as if it already exists.
 5. Keep help overlay instructions synchronized with implemented shortcuts and syntax.
 
+## Commit Guidance
+
+- After every implementation, suggest a commit message based on the current Git working tree.
+- Inspect the uncommitted change set before suggesting the message.
+- If multiple implementations are still uncommitted, the suggested commit message must summarize the full uncommitted change set, not only the latest request.
+- Prefer Conventional Commit style when it fits the change, such as `feat:`, `fix:`, `docs:`, `test:`, `ci:`, or `chore:`.
+- Do not suggest a commit message for changes that were not actually made.
+
 ## Test Design Rules
 
 - Prefer behavior-focused tests over implementation snapshots.
@@ -155,6 +163,7 @@ Final responses should include:
 - what changed;
 - what was validated;
 - any documentation or TODO updates;
+- a suggested commit message based on the current uncommitted Git tree;
 - any known limitation or skipped check.
 
 Keep the response concise and specific.
