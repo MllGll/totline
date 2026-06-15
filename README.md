@@ -20,6 +20,7 @@
 - [Build Artifacts](#build-artifacts)
 - [Project Structure](#project-structure)
 - [Tests](#tests)
+- [CI/CD](#cicd)
 - [Support](#support)
 - [Authors](#authors)
 - [License](#license)
@@ -40,7 +41,7 @@ After publishing a release with the generated installer attached, the direct dow
 https://github.com/MllGll/TOTLINE/releases/latest/download/TOTLINE_0.1.0_x64-setup.exe
 ```
 
-The filename must match the asset uploaded to the GitHub release.
+The release workflow uploads this file automatically when a version tag is pushed. The filename must match the asset uploaded to the GitHub release.
 
 ## Features
 
@@ -215,6 +216,40 @@ The test suite covers:
 - window geometry restoration;
 - Tauri command, permission, and config contracts;
 - E2E writing flows and visual smoke checks.
+
+## CI/CD
+
+GitHub Actions runs the CI workflow on pushes and pull requests targeting `main`.
+
+The validation job runs on Windows and checks the application with:
+
+- `npm run test`;
+- `npm run build`;
+- `npm run test:e2e`;
+- `cargo check`;
+- `cargo test`.
+
+On pushes to `main`, the workflow also builds the Tauri desktop app and uploads the Windows executable and installer packages as GitHub Actions artifacts.
+
+The release workflow runs when a version tag is pushed:
+
+```bash
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+When the tag reaches GitHub, the workflow:
+
+- installs Node.js and Rust;
+- installs project dependencies;
+- runs frontend tests;
+- runs Playwright E2E tests;
+- runs Rust and Tauri tests;
+- builds the Windows desktop app;
+- creates a GitHub Release for the tag;
+- uploads `totline.exe`, the NSIS setup installer, and the MSI installer as release assets.
+
+CI artifacts are temporary files attached to a workflow run. Release assets are the public files users should download from the Releases page.
 
 ## Support
 
