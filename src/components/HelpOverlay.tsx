@@ -1,51 +1,54 @@
+import { useEffect, useRef } from "react";
+import { Astroid, BookOpen } from "lucide-react";
+
 interface HelpOverlayProps {
   visible: boolean;
   onClose: () => void;
 }
 
 export function HelpOverlay({ visible, onClose }: HelpOverlayProps) {
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (visible) {
+      panelRef.current?.focus();
+    }
+  }, [visible]);
+
   if (!visible) return null;
 
   const shortcuts = [
+    ["Ctrl", "+", "? / \u00b0", "Show/hide help"],
     ["Esc", "Minimize window"],
     ["Ctrl", "+", "Scroll", "Zoom"],
     ["Ctrl", "+", "0", "Reset zoom"],
-    ["[ ]", "/ [x]", "Tasks"],
+    ["[ ]", "/", "[x]", "Styled Checkbox"],
     ["*text*", "Bold"],
     ["*line", "Bold line"],
   ];
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/[0.18] backdrop-blur-[2px]"
+      className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-[3px]"
       onClick={onClose}
     >
       <div
+        ref={panelRef}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="help-title"
         className="help-panel w-[min(370px,calc(100vw-48px))] px-8 py-7"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="tone-icon mx-auto grid h-8 w-8 place-items-center rounded-full border">
-          <svg
-            viewBox="0 0 24 24"
-            className="h-4 w-4"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.6"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden
-          >
-            <path d="M4 19.5V5.2A2.2 2.2 0 0 1 6.2 3H20v16H6.2A2.2 2.2 0 0 0 4 21.2" />
-            <path d="M8 7h8" />
-            <path d="M8 11h6" />
-          </svg>
+        <div className="help-mark mx-auto grid h-10 w-10 place-items-center rounded-full">
+          <BookOpen className="h-5 w-5" />
         </div>
 
         <div className="mt-4 text-center">
-          <h2 className="tone-title text-sm font-medium">Quick Help</h2>
-          <p className="tone-copy-dim mt-1 text-[11px]">
-            Minimal, persistent, always available.
-          </p>
+          <h2 id="help-title" className="tone-title text-sm font-medium">
+            Keyboard Shortcuts
+          </h2>
         </div>
 
         <div className="mt-7 space-y-3">
@@ -83,23 +86,17 @@ export function HelpOverlay({ visible, onClose }: HelpOverlayProps) {
           })}
         </div>
 
-        <div className="tone-divider mt-7 border-t pt-5">
-          <p className="tone-copy-dim text-[11px] leading-relaxed">
-            One endless notebook. No files, no visible structure, just memory
-            in text.
-          </p>
-          <p className="tone-copy-dim mt-3 text-[11px] leading-relaxed">
+        <div className="tone-divider mt-7 border-t pt-5"></div>
+
+        <div className="flex items-start">
+          <div className="tone-copy mt-1 mr-2">
+            <Astroid className="h-4 w-4" />
+          </div>
+          <p className="tone-copy-dim text-[12px] leading-relaxed">
             Esc and the minimize button only move the window out of the way.
             The app keeps running in the background.
           </p>
         </div>
-
-        <button
-          onClick={onClose}
-          className="tone-button mt-6 w-full rounded-full border px-4 py-2 text-xs transition-colors"
-        >
-          Close
-        </button>
       </div>
     </div>
   );

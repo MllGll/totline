@@ -39,7 +39,11 @@ test("reveals help from the hover header and dismisses it", async ({ page }) => 
   await expect(page.getByText("TOTLINE")).toBeVisible();
   await page.getByRole("button", { name: "Help" }).click();
 
-  await expect(page.getByText("Quick Help")).toBeVisible();
+  await expect(page.getByText("Keyboard Shortcuts")).toBeVisible();
+  await expect(
+    page.locator("kbd").filter({ hasText: "? / \u00b0" }),
+  ).toBeVisible();
+  await expect(page.getByText("Show/hide help")).toBeVisible();
   await expect(page.getByText("*text*")).toBeVisible();
   await expect(page.getByText("*line")).toBeVisible();
   await expect(page.getByText(/keeps running in the background/i)).toBeVisible();
@@ -50,8 +54,41 @@ test("reveals help from the hover header and dismisses it", async ({ page }) => 
     /pointer-events-none/,
   );
 
-  await page.getByRole("button", { name: "Close" }).click();
-  await expect(page.getByText("Quick Help")).not.toBeVisible();
+  await page.mouse.click(12, 120);
+  await expect(page.getByText("Keyboard Shortcuts")).not.toBeVisible();
+});
+
+test("toggles help with the question mark shortcut", async ({ page }) => {
+  await page.getByRole("textbox").click();
+  await page.keyboard.press("Control+/");
+
+  await expect(page.getByText("Keyboard Shortcuts")).toBeVisible();
+  await expect(page.getByText("Show/hide help")).toBeVisible();
+
+  await page.keyboard.press("Control+/");
+
+  await expect(page.getByText("Keyboard Shortcuts")).not.toBeVisible();
+});
+
+test("allows plain question marks in the editor", async ({ page }) => {
+  await page.getByRole("textbox").click();
+  await page.keyboard.type("Really?");
+
+  await expect(page.locator(".cm-line")).toContainText("Really?");
+  await expect(page.getByText("Keyboard Shortcuts")).not.toBeVisible();
+});
+
+test("blocks editor typing while help is open", async ({ page }) => {
+  await page.getByRole("textbox").click();
+  await page.keyboard.type("Before");
+  await page.keyboard.press("Control+/");
+
+  await expect(page.getByText("Keyboard Shortcuts")).toBeVisible();
+
+  await page.keyboard.type("Blocked");
+
+  await expect(page.locator(".cm-line")).toContainText("Before");
+  await expect(page.locator(".cm-line")).not.toContainText("Blocked");
 });
 
 test("shows zoom feedback when using ctrl wheel", async ({ page }) => {
