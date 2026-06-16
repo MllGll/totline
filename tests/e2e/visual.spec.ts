@@ -39,6 +39,7 @@ test("keeps the hover header lightweight and aligned", async ({ page }) => {
   await page.mouse.move(8, 8);
 
   await expect(header).toHaveClass(/opacity-100/);
+  await expect(page.locator(".app-title-icon")).toBeVisible();
   await expect(page.getByText("TOTLINE")).toBeVisible();
   await expect(page.getByRole("button", { name: "Always on top" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Help" })).toBeVisible();
@@ -58,6 +59,12 @@ test("keeps the hover header lightweight and aligned", async ({ page }) => {
   expect(Math.abs(box?.y ?? 999)).toBeLessThan(2);
   expect(box?.height).toBeGreaterThanOrEqual(40);
   expect(box?.height).toBeLessThanOrEqual(48);
+
+  const iconBox = await page.locator(".app-title-icon").boundingBox();
+  expect(iconBox?.width).toBeGreaterThanOrEqual(14);
+  expect(iconBox?.height).toBeGreaterThanOrEqual(14);
+  expect(iconBox?.width).toBeLessThanOrEqual(16);
+  expect(iconBox?.height).toBeLessThanOrEqual(16);
 });
 
 test("centers the help panel above the editor", async ({ page }) => {

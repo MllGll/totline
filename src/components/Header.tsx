@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { Lock, LockOpen, CircleQuestionMark, Minus, X } from 'lucide-react';
+import appIcon from "../../src-tauri/icons/64x64.png";
 
 interface HeaderProps {
   visible: boolean;
@@ -21,7 +23,7 @@ export function Header({
     <header
       data-tauri-drag-region
       className={[
-        "app-header absolute inset-x-0 top-0 z-30 flex h-11 items-center justify-between px-5 text-zinc-100",
+        "app-header absolute inset-x-0 top-0 z-30 flex h-11 items-center justify-between pl-5 pr-4 text-zinc-100",
         visible
           ? "translate-y-0 opacity-100"
           : "-translate-y-full opacity-0 pointer-events-none",
@@ -29,15 +31,15 @@ export function Header({
     >
       <div
         data-tauri-drag-region
-        className="flex flex-1 select-none items-center gap-3"
+        className="flex flex-1 select-none items-center gap-2"
       >
-        <span className="app-title-dot" aria-hidden />
-        <span className="app-title text-[10px] font-medium uppercase tracking-[0.28em]">
+        <img className="app-title-icon" src={appIcon} alt="" aria-hidden />
+        <span className="app-title text-[12px] font-medium uppercase tracking-[0.28em]">
           TOTLINE
         </span>
       </div>
 
-      <div className="flex items-center gap-1.5">
+      <div className="flex items-center gap-2">
         <button
           type="button"
           onClick={() => onAlwaysOnTopChange(!alwaysOnTop)}
@@ -48,20 +50,7 @@ export function Header({
           title="Always on top"
           aria-label="Always on top"
         >
-          <svg
-            viewBox="0 0 16 16"
-            className="h-3 w-3"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.6"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden
-          >
-            <path d="M5.5 2.8h5" />
-            <path d="M6.3 2.8 6 6.2 4.2 8h5.6L8 6.2l-.3-3.4" />
-            <path d="M7 8v5" />
-          </svg>
+          {alwaysOnTop ? <Lock className="h-4 w-4" /> : <LockOpen className="h-4 w-4" />}
         </button>
 
         <button
@@ -71,7 +60,7 @@ export function Header({
           title="Help"
           aria-label="Help"
         >
-          ?
+          <CircleQuestionMark className="h-4 w-4" />
         </button>
 
         <button
@@ -81,18 +70,7 @@ export function Header({
           title="Minimize"
           aria-label="Minimize"
         >
-          <svg
-            viewBox="0 0 16 16"
-            className="h-3 w-3"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.7"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden
-          >
-            <path d="M3.5 8h9" />
-          </svg>
+          <Minus className="h-4 w-4" />
         </button>
 
         <button
@@ -102,19 +80,7 @@ export function Header({
           title="Close to background"
           aria-label="Close to background"
         >
-          <svg
-            viewBox="0 0 16 16"
-            className="h-3 w-3"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.7"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden
-          >
-            <path d="M4.2 4.2 11.8 11.8" />
-            <path d="M11.8 4.2 4.2 11.8" />
-          </svg>
+          <X className="h-4 w-4" />
         </button>
       </div>
     </header>
