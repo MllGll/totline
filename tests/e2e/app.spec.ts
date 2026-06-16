@@ -101,6 +101,32 @@ test("shows zoom feedback when using ctrl wheel", async ({ page }) => {
   await expect(page.getByText("105%")).toBeVisible();
 });
 
+test("uses ctrl wheel for zoom without scrolling the editor", async ({
+  page,
+}) => {
+  const editor = page.getByRole("textbox");
+  await editor.click();
+  await page.keyboard.insertText(
+    Array.from({ length: 80 }, (_, index) => `line ${index + 1}`).join("\n"),
+  );
+
+  const scroller = page.locator(".cm-scroller");
+  await scroller.evaluate((element) => {
+    element.scrollTop = 260;
+  });
+
+  const before = await scroller.evaluate((element) => element.scrollTop);
+
+  await page.keyboard.down("Control");
+  await page.mouse.wheel(0, -160);
+  await page.keyboard.up("Control");
+
+  await expect(page.getByText("105%")).toBeVisible();
+
+  const after = await scroller.evaluate((element) => element.scrollTop);
+  expect(Math.abs(after - before)).toBeLessThan(2);
+});
+
 test("resets zoom with ctrl 0", async ({ page }) => {
   await page.getByRole("textbox").click();
 
