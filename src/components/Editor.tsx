@@ -45,7 +45,7 @@ interface EditorProps {
 }
 
 const BASE_FONT_SIZE = 15;
-const LINE_HEIGHT = 1.6;
+const LINE_HEIGHT = 1.8;
 const MIN_ZOOM = 0.75;
 const MAX_ZOOM = 2;
 const EDITOR_PADDING_X = 80;
@@ -575,8 +575,6 @@ function createExtensions(
       },
       ".cm-completed-text": {
         color: "rgb(var(--tone-soft-rgb) / 0.62)",
-        textDecoration: "line-through",
-        textDecorationColor: "rgb(var(--tone-soft-rgb) / 0.58)",
       },
       ".cm-completed-text .cm-bold-text, .cm-bold-text.cm-completed-text, .cm-bold-text .cm-completed-text": {
         color: "rgb(var(--tone-soft-rgb) / 0.62)",
@@ -587,9 +585,9 @@ function createExtensions(
         display: "inline-flex",
         alignItems: "center",
         justifyContent: "center",
-        width: "0.72em",
+        width: "1.2em",
         height: "calc(var(--editor-font-size) * var(--editor-line-height))",
-        marginRight: "0.42em",
+        marginRight: "0.2em",
         verticalAlign: "top",
       },
       ".cm-checkbox-widget": {
@@ -598,23 +596,14 @@ function createExtensions(
         display: "inline-flex",
         alignItems: "center",
         justifyContent: "center",
-        width: "0.72em",
-        height: "0.72em",
+        width: "1.2em",
+        height: "1.2em",
         padding: "0",
         borderRadius: "3px",
         border: "1px solid rgb(var(--tone-soft-rgb) / 0.46)",
-        background: "rgb(var(--tone-accent-rgb) / 0.08)",
-        color: "rgb(var(--tone-rgb) / 0.72)",
-        backdropFilter: "blur(14px) saturate(1.08)",
         cursor: "pointer",
         font: "inherit",
         lineHeight: "0",
-      },
-      ".cm-checkbox-widget[data-checked='true']": {
-        borderColor: "rgb(var(--tone-rgb) / 0.68)",
-        background: "rgb(var(--tone-accent-rgb) / 0.18)",
-        boxShadow:
-          "inset 0 1px 0 rgb(var(--tone-rgb) / 0.24), 0 0 18px rgb(var(--tone-soft-rgb) / 0.12)",
       },
       ".cm-checkbox-widget svg": {
         display: "block",
@@ -759,8 +748,20 @@ class CheckboxWidget extends WidgetType {
       this.checked ? "Mark as pending" : "Mark as complete",
     );
 
-    button.innerHTML =
-      '<svg viewBox="0 0 12 12" width="55%" height="55%" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 6.2 5 8.7 9.5 3.8"/></svg>';
+    button.innerHTML = `
+      <svg
+        width="75%"
+        height="75%"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <path d="M20 6 9 17l-5-5" />
+      </svg>
+    `;
 
     button.addEventListener("mousedown", (event) => {
       event.preventDefault();
