@@ -164,7 +164,7 @@ describe("Editor integration", () => {
     expect(window.getComputedStyle(scroller).fontFamily).toContain(
       "JetBrains Mono",
     );
-    expect(window.getComputedStyle(editor).fontWeight).toBe("200");
+    expect(window.getComputedStyle(editor).fontWeight).toBe("100");
   });
 
   it("changes zoom with ctrl wheel and reports zoom activity", () => {

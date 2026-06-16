@@ -38,7 +38,12 @@ test("keeps the liquid glass shell visually configured", async ({ page }) => {
     };
   });
 
-  expect(styles.background).toBe(panelStyles.background);
+  expect(styles.background).toContain("linear-gradient");
+  expect(panelStyles.background).toContain("linear-gradient");
+  expect(styles.background).toContain("rgba(196, 207, 222, 0.13)");
+  expect(panelStyles.background).toContain("rgba(196, 207, 222, 0.13)");
+  expect(styles.background).toContain("rgba(116, 138, 166, 0.08)");
+  expect(panelStyles.background).toContain("rgba(116, 138, 166, 0.08)");
   expect(styles.borderColor).toBe(panelStyles.borderColor);
   expect(styles.backdropFilter).toContain("blur");
   expect(styles.borderColor).not.toBe("rgba(0, 0, 0, 0)");
@@ -135,7 +140,7 @@ test("keeps help panel focus styling inside the app palette", async ({
   expect(styles.borderColor).not.toBe("rgb(255, 255, 255)");
   expect(styles.outlineColor).not.toBe("rgb(255, 255, 255)");
   expect(keyStyles.fontFamily).toContain("JetBrains Mono");
-  expect(keyStyles.fontWeight).toBe("200");
+  expect(keyStyles.fontWeight).toBe("100");
 });
 
 test("keeps editor focus visually borderless", async ({ page }) => {

@@ -443,7 +443,7 @@ function createExtensions(
         background: "transparent",
         color: "rgb(var(--tone-rgb) / 0.9)",
         fontSize: "var(--editor-font-size)",
-        fontWeight: "200",
+        fontWeight: "100",
       },
       ".cm-scroller": {
         fontFamily:
@@ -576,6 +576,10 @@ function createExtensions(
       ".cm-completed-text": {
         color: "rgb(var(--tone-soft-rgb) / 0.62)",
         textDecoration: "line-through",
+        textDecorationColor: "rgb(var(--tone-soft-rgb) / 0.58)",
+      },
+      ".cm-completed-text .cm-bold-text, .cm-bold-text.cm-completed-text, .cm-bold-text .cm-completed-text": {
+        color: "rgb(var(--tone-soft-rgb) / 0.62)",
         textDecorationColor: "rgb(var(--tone-soft-rgb) / 0.58)",
       },
       ".cm-checkbox-slot": {

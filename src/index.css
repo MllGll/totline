@@ -383,7 +383,7 @@ body {
   background: var(--key-background);
   color: var(--key-color);
   font-family: "JetBrains Mono", "Cascadia Code", Consolas, ui-monospace, monospace;
-  font-weight: 200;
+  font-weight: 100;
   box-shadow: var(--key-shadow);
 }
 
