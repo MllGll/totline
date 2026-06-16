@@ -235,8 +235,9 @@ export default function App() {
         visible={headerVisible}
         alwaysOnTop={state.alwaysOnTop}
         onAlwaysOnTopChange={(alwaysOnTop) => updateState({ alwaysOnTop })}
+        onHideToBackground={() => void handleHideToTray()}
         onHelp={() => setHelpVisible(true)}
-        onClose={handleMinimize}
+        onMinimize={handleMinimize}
       />
 
       <ZoomHud zoom={state.zoom} visible={zoomHudVisible} />

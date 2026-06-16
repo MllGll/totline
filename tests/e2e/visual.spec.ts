@@ -43,6 +43,9 @@ test("keeps the hover header lightweight and aligned", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Always on top" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Help" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Minimize" })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Close to background" }),
+  ).toBeVisible();
 
   await expect
     .poll(async () => {

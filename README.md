@@ -57,6 +57,7 @@ The release workflow uploads this file automatically when a version tag is pushe
 - Reveal a minimal header by hovering near the top edge.
 - Open a centered help overlay from the header.
 - Keep the window always on top with the pin control.
+- Close the window to the background without quitting the app.
 - Restore the previous window geometry when the app starts.
 - Keep the app hidden on startup if it was previously hidden to the tray.
 

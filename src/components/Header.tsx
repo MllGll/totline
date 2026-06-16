@@ -5,7 +5,8 @@ interface HeaderProps {
   alwaysOnTop: boolean;
   onAlwaysOnTopChange: (value: boolean) => void;
   onHelp: () => void;
-  onClose: () => void;
+  onHideToBackground: () => void;
+  onMinimize: () => void;
 }
 
 export function Header({
@@ -13,7 +14,8 @@ export function Header({
   alwaysOnTop,
   onAlwaysOnTopChange,
   onHelp,
-  onClose,
+  onHideToBackground,
+  onMinimize,
 }: HeaderProps) {
   return (
     <header
@@ -74,7 +76,7 @@ export function Header({
 
         <button
           type="button"
-          onClick={onClose}
+          onClick={onMinimize}
           className="app-header-button"
           title="Minimize"
           aria-label="Minimize"
@@ -90,6 +92,28 @@ export function Header({
             aria-hidden
           >
             <path d="M3.5 8h9" />
+          </svg>
+        </button>
+
+        <button
+          type="button"
+          onClick={onHideToBackground}
+          className="app-header-button"
+          title="Close to background"
+          aria-label="Close to background"
+        >
+          <svg
+            viewBox="0 0 16 16"
+            className="h-3 w-3"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.7"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden
+          >
+            <path d="M4.2 4.2 11.8 11.8" />
+            <path d="M11.8 4.2 4.2 11.8" />
           </svg>
         </button>
       </div>

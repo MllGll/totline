@@ -46,7 +46,7 @@ test("reveals help from the hover header and dismisses it", async ({ page }) => 
   await expect(page.getByText("Show/hide help")).toBeVisible();
   await expect(page.getByText("*text*")).toBeVisible();
   await expect(page.getByText("*line")).toBeVisible();
-  await expect(page.getByText(/keeps running in the background/i)).toBeVisible();
+  await expect(page.getByText(/Close hides the window/i)).toBeVisible();
 
   await page.mouse.move(8, 8);
   await expect(page.locator("header.app-header")).toHaveClass(/opacity-0/);
@@ -89,6 +89,22 @@ test("blocks editor typing while help is open", async ({ page }) => {
 
   await expect(page.locator(".cm-line")).toContainText("Before");
   await expect(page.locator(".cm-line")).not.toContainText("Blocked");
+});
+
+test("close button hides the window to the background state", async ({
+  page,
+}) => {
+  await page.mouse.move(8, 8);
+  await page.getByRole("button", { name: "Close to background" }).click();
+
+  await expect
+    .poll(async () =>
+      page.evaluate(() => {
+        const raw = window.localStorage.getItem("totline:e2e:app-state");
+        return raw ? JSON.parse(raw).lastWindowVisible : null;
+      }),
+    )
+    .toBe(false);
 });
 
 test("shows zoom feedback when using ctrl wheel", async ({ page }) => {

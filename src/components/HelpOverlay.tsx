@@ -93,8 +93,8 @@ export function HelpOverlay({ visible, onClose }: HelpOverlayProps) {
             <Astroid className="h-4 w-4" />
           </div>
           <p className="tone-copy-dim text-[12px] leading-relaxed">
-            Esc and the minimize button only move the window out of the way.
-            The app keeps running in the background.
+            Esc and Minimize only move the window out of the way. Close hides
+            the window to the background while keeping the app running.
           </p>
         </div>
       </div>
