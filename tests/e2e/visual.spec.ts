@@ -61,10 +61,8 @@ test("keeps the hover header lightweight and aligned", async ({ page }) => {
   expect(box?.height).toBeLessThanOrEqual(48);
 
   const iconBox = await page.locator(".app-title-icon").boundingBox();
-  expect(iconBox?.width).toBeGreaterThanOrEqual(14);
-  expect(iconBox?.height).toBeGreaterThanOrEqual(14);
-  expect(iconBox?.width).toBeLessThanOrEqual(16);
-  expect(iconBox?.height).toBeLessThanOrEqual(16);
+  expect(iconBox?.width).toBe(20);
+  expect(iconBox?.height).toBe(20);
 });
 
 test("centers the help panel above the editor", async ({ page }) => {
