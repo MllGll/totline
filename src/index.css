@@ -27,7 +27,7 @@
   --glass-shadow:
     0 34px 120px rgba(0, 0, 0, 0.36),
     0 12px 42px rgba(0, 0, 0, 0.24);
-  --surface-panel: rgb(var(--palette-surface-elevated-rgb) / 0.82);
+  --surface-panel: rgb(var(--palette-surface-elevated-rgb) / 0.85);
   --surface-panel-soft: rgb(var(--palette-surface-elevated-rgb) / 0.42);
   --edge-soft: rgb(var(--palette-edge-rgb) / 0.16);
   --edge-medium: rgb(var(--palette-edge-rgb) / 0.28);
@@ -91,7 +91,7 @@ body {
   background:
     linear-gradient(135deg, var(--light-trace) 0%, transparent 32%),
     linear-gradient(150deg, transparent 18%, var(--light-trace-soft) 48%, transparent 76%),
-    linear-gradient(180deg, var(--surface-panel), rgb(var(--palette-surface-rgb) / 0.78));
+    linear-gradient(180deg, var(--surface-panel), rgb(var(--palette-surface-rgb) / 0.85));
   backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
   -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
   box-shadow:
