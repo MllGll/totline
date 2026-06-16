@@ -43,6 +43,10 @@
     linear-gradient(135deg, var(--light-trace) 0%, transparent 32%),
     linear-gradient(150deg, transparent 18%, var(--light-trace-soft) 48%, transparent 76%),
     linear-gradient(180deg, var(--surface-panel), rgb(var(--palette-surface-rgb) / 0.78));
+  --editor-scrollbar-size: 16px;
+  --editor-scrollbar-inset: 5px;
+  --editor-scrollbar-offset: 4px;
+  --editor-scroll-edge-size: 58px;
 }
 
 html,
@@ -64,6 +68,18 @@ body {
 
 * {
   box-sizing: border-box;
+}
+
+@property --editor-top-mask-opacity {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 1;
+}
+
+@property --editor-bottom-mask-opacity {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 1;
 }
 
 .app-glass {
@@ -171,22 +187,76 @@ body {
   background: rgb(var(--tone-accent-rgb) / 0.34);
 }
 
-.cm-scroller::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+.cm-editor-host .cm-scroller {
+  --editor-top-mask-opacity: 1;
+  --editor-bottom-mask-opacity: 1;
+  mask-image:
+    linear-gradient(
+      180deg,
+      rgb(0 0 0 / var(--editor-top-mask-opacity)) 0,
+      #000 var(--editor-scroll-edge-size),
+      #000 calc(100% - var(--editor-scroll-edge-size)),
+      rgb(0 0 0 / var(--editor-bottom-mask-opacity)) 100%
+    );
+  -webkit-mask-image:
+    linear-gradient(
+      180deg,
+      rgb(0 0 0 / var(--editor-top-mask-opacity)) 0,
+      #000 var(--editor-scroll-edge-size),
+      #000 calc(100% - var(--editor-scroll-edge-size)),
+      rgb(0 0 0 / var(--editor-bottom-mask-opacity)) 100%
+    );
+  transition:
+    --editor-top-mask-opacity 420ms cubic-bezier(0.22, 1, 0.36, 1),
+    --editor-bottom-mask-opacity 420ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.cm-scroller::-webkit-scrollbar-track {
-  background: transparent;
+.cm-editor-host-top-fade .cm-scroller {
+  --editor-top-mask-opacity: 0;
 }
 
-.cm-scroller::-webkit-scrollbar-thumb {
-  background: rgb(var(--tone-soft-rgb) / 0.3);
+.cm-editor-host-bottom-fade .cm-scroller {
+  --editor-bottom-mask-opacity: 0;
+}
+
+.editor-scrollbar {
+  position: absolute;
+  top: 0;
+  right: var(--editor-scrollbar-offset);
+  bottom: 0;
+  z-index: 5;
+  width: var(--editor-scrollbar-size);
+  pointer-events: none;
+}
+
+.editor-scrollbar-thumb {
+  position: absolute;
+  right: var(--editor-scrollbar-inset);
+  left: var(--editor-scrollbar-inset);
+  min-height: 36px;
   border-radius: 999px;
+  background:
+    linear-gradient(
+      180deg,
+      rgb(var(--palette-edge-rgb) / 0.32),
+      rgb(var(--tone-soft-rgb) / 0.18)
+    );
+  box-shadow:
+    inset 0 1px 0 rgb(var(--tone-rgb) / 0.12),
+    0 0 18px rgb(var(--palette-edge-rgb) / 0.08);
+  opacity: 0;
+  pointer-events: auto;
+  transition: opacity 680ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: opacity;
 }
 
-.cm-scroller::-webkit-scrollbar-thumb:hover {
-  background: rgb(var(--tone-rgb) / 0.46);
+.editor-scrollbar-thumb-focused {
+  opacity: 0.48;
+}
+
+.editor-scrollbar-thumb-focused.editor-scrollbar-thumb-active {
+  opacity: 0.88;
+  transition-duration: 360ms;
 }
 
 .zoom-hud {

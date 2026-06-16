@@ -169,7 +169,7 @@ describe("Editor integration", () => {
 
   it("changes zoom with ctrl wheel and reports zoom activity", () => {
     const { container, props } = renderEditor({ zoom: 1 });
-    const host = container.firstElementChild as HTMLElement;
+    const host = container.querySelector(".cm-editor-mount") as HTMLElement;
 
     fireEvent.wheel(host, { ctrlKey: true, deltaY: -100 });
 

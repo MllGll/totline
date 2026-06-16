@@ -2,6 +2,7 @@ import {
   useEffect,
   useMemo,
   useRef,
+  useState,
 } from "react";
 import { history, historyKeymap, insertTab } from "@codemirror/commands";
 import {
@@ -50,6 +51,13 @@ const MAX_ZOOM = 2;
 const EDITOR_PADDING_X = 80;
 const EDITOR_PADDING_Y = 40;
 const EDITOR_HEADER_PADDING_Y = 80;
+const MIN_SCROLLBAR_THUMB_HEIGHT = 36;
+
+interface ScrollbarMetrics {
+  clientHeight: number;
+  scrollHeight: number;
+  scrollTop: number;
+}
 
 export function Editor({
   content,
@@ -69,6 +77,12 @@ export function Editor({
 }: EditorProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
+  const dragRef = useRef<{
+    pointerId: number;
+    startScrollTop: number;
+    startY: number;
+  } | null>(null);
+  const scrollbarActivityTimerRef = useRef<number | null>(null);
   const callbacksRef = useRef({
     onContentChange,
     onCursorChange,
@@ -80,6 +94,35 @@ export function Editor({
     onZoomActivity,
     onZoomChange,
   });
+  const [scrollbarMetrics, setScrollbarMetrics] = useState<ScrollbarMetrics>({
+    clientHeight: 1,
+    scrollHeight: 1,
+    scrollTop: 0,
+  });
+  const [scrollbarActive, setScrollbarActive] = useState(false);
+  const [appFocused, setAppFocused] = useState(() => document.hasFocus());
+
+  const showScrollbarActivity = () => {
+    setScrollbarActive(true);
+
+    if (scrollbarActivityTimerRef.current !== null) {
+      window.clearTimeout(scrollbarActivityTimerRef.current);
+    }
+
+    scrollbarActivityTimerRef.current = window.setTimeout(() => {
+      setScrollbarActive(false);
+      scrollbarActivityTimerRef.current = null;
+    }, 700);
+  };
+
+  const clearScrollbarActivity = () => {
+    setScrollbarActive(false);
+
+    if (scrollbarActivityTimerRef.current !== null) {
+      window.clearTimeout(scrollbarActivityTimerRef.current);
+      scrollbarActivityTimerRef.current = null;
+    }
+  };
 
   useEffect(() => {
     callbacksRef.current = {
@@ -105,10 +148,45 @@ export function Editor({
     zoomRef.current = zoom;
   }, [zoom]);
 
+  useEffect(() => {
+    const onFocus = () => setAppFocused(true);
+    const onBlur = () => {
+      setAppFocused(false);
+      clearScrollbarActivity();
+    };
+
+    window.addEventListener("focus", onFocus);
+    window.addEventListener("blur", onBlur);
+
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      window.removeEventListener("blur", onBlur);
+    };
+  }, []);
+
   const paddingY = headerVisible
     ? EDITOR_HEADER_PADDING_Y
     : EDITOR_PADDING_Y;
   const fontSize = BASE_FONT_SIZE * zoom;
+  const maxScrollTop = Math.max(
+    0,
+    scrollbarMetrics.scrollHeight - scrollbarMetrics.clientHeight,
+  );
+  const scrollbarVisible = maxScrollTop > 1;
+  const scrollbarThumbHeight = scrollbarVisible
+    ? Math.max(
+        MIN_SCROLLBAR_THUMB_HEIGHT,
+        (scrollbarMetrics.clientHeight / scrollbarMetrics.scrollHeight) *
+          scrollbarMetrics.clientHeight,
+      )
+    : 0;
+  const scrollbarThumbTop = scrollbarVisible
+    ? (scrollbarMetrics.scrollTop / maxScrollTop) *
+      (scrollbarMetrics.clientHeight - scrollbarThumbHeight)
+    : 0;
+  const showTopScrollEdge = scrollbarMetrics.scrollTop > 1;
+  const showBottomScrollEdge =
+    scrollbarVisible && maxScrollTop - scrollbarMetrics.scrollTop > 1;
 
   const extensions = useMemo(() => createExtensions(callbacksRef), []);
 
@@ -127,6 +205,7 @@ export function Editor({
     requestAnimationFrame(() => {
       view.scrollDOM.scrollTop = scrollTop;
       view.scrollDOM.scrollLeft = scrollLeft;
+      updateScrollbarMetrics(view.scrollDOM, setScrollbarMetrics);
     });
 
     const onScroll = () => {
@@ -134,6 +213,8 @@ export function Editor({
         view.scrollDOM.scrollTop,
         view.scrollDOM.scrollLeft,
       );
+      updateScrollbarMetrics(view.scrollDOM, setScrollbarMetrics);
+      showScrollbarActivity();
     };
 
     const onZoomWheel = (event: WheelEvent) => {
@@ -160,6 +241,10 @@ export function Editor({
     return () => {
       view.scrollDOM.removeEventListener("scroll", onScroll);
       host.removeEventListener("wheel", onZoomWheel, { capture: true });
+      if (scrollbarActivityTimerRef.current !== null) {
+        window.clearTimeout(scrollbarActivityTimerRef.current);
+        scrollbarActivityTimerRef.current = null;
+      }
       view.destroy();
       viewRef.current = null;
     };
@@ -174,6 +259,9 @@ export function Editor({
 
     view.dispatch({
       changes: { from: 0, to: current.length, insert: content },
+    });
+    requestAnimationFrame(() => {
+      updateScrollbarMetrics(view.scrollDOM, setScrollbarMetrics);
     });
   }, [content]);
 
@@ -201,6 +289,7 @@ export function Editor({
     requestAnimationFrame(() => {
       view.scrollDOM.scrollTop = scrollTop;
       view.scrollDOM.scrollLeft = scrollLeft;
+      updateScrollbarMetrics(view.scrollDOM, setScrollbarMetrics);
     });
   }, []);
 
@@ -209,14 +298,56 @@ export function Editor({
     if (!view) return;
 
     view.requestMeasure();
-    const timeout = window.setTimeout(() => view.requestMeasure(), 240);
+    updateScrollbarMetrics(view.scrollDOM, setScrollbarMetrics);
+    const timeout = window.setTimeout(() => {
+      view.requestMeasure();
+      updateScrollbarMetrics(view.scrollDOM, setScrollbarMetrics);
+    }, 240);
     return () => window.clearTimeout(timeout);
   }, [headerVisible]);
 
+  const onScrollbarPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    const view = viewRef.current;
+    if (!view || !scrollbarVisible) return;
+
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    dragRef.current = {
+      pointerId: event.pointerId,
+      startScrollTop: view.scrollDOM.scrollTop,
+      startY: event.clientY,
+    };
+    showScrollbarActivity();
+  };
+
+  const onScrollbarPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    const view = viewRef.current;
+    const drag = dragRef.current;
+    if (!view || !drag || drag.pointerId !== event.pointerId) return;
+
+    const trackRange = scrollbarMetrics.clientHeight - scrollbarThumbHeight;
+    if (trackRange <= 0) return;
+
+    const deltaY = event.clientY - drag.startY;
+    view.scrollDOM.scrollTop =
+      drag.startScrollTop + (deltaY / trackRange) * maxScrollTop;
+    showScrollbarActivity();
+  };
+
+  const onScrollbarPointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (dragRef.current?.pointerId === event.pointerId) {
+      dragRef.current = null;
+      showScrollbarActivity();
+    }
+  };
+
   return (
     <div
-      ref={hostRef}
-      className="cm-editor-host h-full w-full"
+      className={[
+        "cm-editor-host relative h-full w-full",
+        showTopScrollEdge ? "cm-editor-host-top-fade" : "",
+        showBottomScrollEdge ? "cm-editor-host-bottom-fade" : "",
+      ].join(" ")}
       style={
         {
           "--editor-font-size": `${fontSize}px`,
@@ -229,8 +360,52 @@ export function Editor({
           transition: "height 220ms ease, transform 220ms ease",
         } as React.CSSProperties
       }
-    />
+    >
+      <div ref={hostRef} className="cm-editor-mount h-full w-full" />
+      {scrollbarVisible ? (
+        <div className="editor-scrollbar" aria-hidden="true">
+          <div
+            className={[
+              "editor-scrollbar-thumb",
+              appFocused ? "editor-scrollbar-thumb-focused" : "",
+              scrollbarActive ? "editor-scrollbar-thumb-active" : "",
+            ].join(" ")}
+            onPointerDown={onScrollbarPointerDown}
+            onPointerMove={onScrollbarPointerMove}
+            onPointerUp={onScrollbarPointerUp}
+            onPointerCancel={onScrollbarPointerUp}
+            style={{
+              height: `${scrollbarThumbHeight}px`,
+              transform: `translateY(${scrollbarThumbTop}px)`,
+            }}
+          />
+        </div>
+      ) : null}
+    </div>
   );
+}
+
+function updateScrollbarMetrics(
+  element: HTMLElement,
+  setMetrics: React.Dispatch<React.SetStateAction<ScrollbarMetrics>>,
+) {
+  const next = {
+    clientHeight: Math.max(1, element.clientHeight),
+    scrollHeight: Math.max(1, element.scrollHeight),
+    scrollTop: element.scrollTop,
+  };
+
+  setMetrics((current) => {
+    if (
+      current.clientHeight === next.clientHeight &&
+      current.scrollHeight === next.scrollHeight &&
+      current.scrollTop === next.scrollTop
+    ) {
+      return current;
+    }
+
+    return next;
+  });
 }
 
 function createExtensions(
@@ -276,9 +451,102 @@ function createExtensions(
         lineHeight: "var(--editor-line-height)",
         background: "transparent",
         overflow: "auto",
-        scrollbarWidth: "thin",
-        scrollbarColor: "rgb(var(--tone-soft-rgb) / 0.36) transparent",
+        overscrollBehavior: "contain",
+        scrollBehavior: "smooth",
+        scrollbarWidth: "none",
+        scrollbarColor: "transparent transparent",
         padding: "0 var(--editor-padding-x)",
+      },
+      ".cm-scroller::-webkit-scrollbar": {
+        display: "none",
+        width: "0",
+        height: "0",
+      },
+      ".cm-scroller::-webkit-scrollbar-button": {
+        appearance: "none",
+        background: "transparent",
+        backgroundColor: "transparent",
+        backgroundImage: "none",
+        border: "0",
+        display: "none",
+        minWidth: "0",
+        minHeight: "0",
+        width: "0 !important",
+        height: "0 !important",
+      },
+      ".cm-scroller::-webkit-scrollbar-button:single-button, .cm-scroller::-webkit-scrollbar-button:double-button": {
+        appearance: "none",
+        background: "transparent",
+        backgroundColor: "transparent",
+        backgroundImage: "none",
+        border: "0",
+        display: "none",
+        minWidth: "0",
+        minHeight: "0",
+        width: "0 !important",
+        height: "0 !important",
+      },
+      ".cm-scroller::-webkit-scrollbar-button:vertical, .cm-scroller::-webkit-scrollbar-button:horizontal": {
+        appearance: "none",
+        background: "transparent",
+        backgroundColor: "transparent",
+        backgroundImage: "none",
+        border: "0",
+        display: "none",
+        minWidth: "0",
+        minHeight: "0",
+        width: "0 !important",
+        height: "0 !important",
+      },
+      ".cm-scroller::-webkit-scrollbar-button:start, .cm-scroller::-webkit-scrollbar-button:end": {
+        appearance: "none",
+        background: "transparent",
+        backgroundColor: "transparent",
+        backgroundImage: "none",
+        border: "0",
+        display: "none",
+        minWidth: "0",
+        minHeight: "0",
+        width: "0 !important",
+        height: "0 !important",
+      },
+      ".cm-scroller::-webkit-scrollbar-button:increment, .cm-scroller::-webkit-scrollbar-button:decrement": {
+        appearance: "none",
+        background: "transparent",
+        backgroundColor: "transparent",
+        backgroundImage: "none",
+        border: "0",
+        display: "none",
+        minWidth: "0",
+        minHeight: "0",
+        width: "0 !important",
+        height: "0 !important",
+      },
+      ".cm-scroller::-webkit-scrollbar-track": {
+        background: "transparent",
+      },
+      ".cm-scroller::-webkit-scrollbar-thumb": {
+        minHeight: "56px",
+        border: "var(--editor-scrollbar-inset) solid transparent",
+        borderRadius: "999px",
+        background:
+          "linear-gradient(180deg, rgb(var(--palette-edge-rgb) / 0.36), rgb(var(--tone-soft-rgb) / 0.22)) padding-box",
+        boxShadow:
+          "inset 0 1px 0 rgb(var(--tone-rgb) / 0.14), 0 0 18px rgb(var(--palette-edge-rgb) / 0.08)",
+      },
+      ".cm-scroller:not(:hover):not(:focus-within)::-webkit-scrollbar-thumb": {
+        background:
+          "linear-gradient(180deg, rgb(var(--palette-edge-rgb) / 0.18), rgb(var(--tone-soft-rgb) / 0.1)) padding-box",
+        boxShadow: "none",
+      },
+      ".cm-scroller::-webkit-scrollbar-thumb:hover": {
+        background:
+          "linear-gradient(180deg, rgb(var(--palette-edge-rgb) / 0.58), rgb(var(--tone-rgb) / 0.38)) padding-box",
+        boxShadow:
+          "inset 0 1px 0 rgb(var(--tone-rgb) / 0.22), 0 0 22px rgb(var(--palette-edge-rgb) / 0.14)",
+      },
+      ".cm-scroller::-webkit-scrollbar-corner": {
+        background: "transparent",
       },
       ".cm-content": {
         minHeight: "100%",
