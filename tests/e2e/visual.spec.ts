@@ -77,5 +77,5 @@ test("centers the help panel above the editor", async ({ page }) => {
 
   expect(Math.abs(panelCenterX - viewportCenterX)).toBeLessThan(2);
   expect(Math.abs(panelCenterY - viewportCenterY)).toBeLessThan(2);
-  await expect(page.getByText("Quick Help")).toBeVisible();
+  await expect(page.getByText("Keyboard Shortcuts")).toBeVisible();
 });
