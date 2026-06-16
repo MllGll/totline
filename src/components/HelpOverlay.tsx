@@ -9,6 +9,7 @@ export function HelpOverlay({ visible, onClose }: HelpOverlayProps) {
   if (!visible) return null;
 
   const shortcuts = [
+    ["Ctrl", "+", "? / °", "Show/hide help"],
     ["Esc", "Minimize window"],
     ["Ctrl", "+", "Scroll", "Zoom"],
     ["Ctrl", "+", "0", "Reset zoom"],

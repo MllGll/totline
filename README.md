@@ -53,6 +53,7 @@ The release workflow uploads this file automatically when a version tag is pushe
 - Use `*line` to render an entire line in bold.
 - Change editor zoom with `Ctrl + scroll`.
 - Reset editor zoom with `Ctrl + 0`.
+- Show or hide keyboard shortcut help with the `Ctrl + ? / °` key.
 - Reveal a minimal header by hovering near the top edge.
 - Open a centered help overlay from the header.
 - Keep the window always on top with the pin control.

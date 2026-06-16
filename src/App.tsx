@@ -175,14 +175,20 @@ export default function App() {
         return;
       }
 
+      if (event.ctrlKey && (event.key === "/" || event.key === "?")) {
+        event.preventDefault();
+        setHelpVisible((current) => !current);
+        return;
+      }
+
       if (event.key === "Escape") {
         event.preventDefault();
         handleMinimize();
       }
     };
 
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+    window.addEventListener("keydown", onKeyDown, true);
+    return () => window.removeEventListener("keydown", onKeyDown, true);
   }, [handleMinimize, showZoomHud, updateState]);
 
   if (!ready) {

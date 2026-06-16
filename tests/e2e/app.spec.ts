@@ -40,6 +40,8 @@ test("reveals help from the hover header and dismisses it", async ({ page }) => 
   await page.getByRole("button", { name: "Help" }).click();
 
   await expect(page.getByText("Keyboard Shortcuts")).toBeVisible();
+  await expect(page.locator("kbd").filter({ hasText: "? / °" })).toBeVisible();
+  await expect(page.getByText("Show/hide help")).toBeVisible();
   await expect(page.getByText("*text*")).toBeVisible();
   await expect(page.getByText("*line")).toBeVisible();
   await expect(page.getByText(/keeps running in the background/i)).toBeVisible();
@@ -51,6 +53,26 @@ test("reveals help from the hover header and dismisses it", async ({ page }) => 
   );
 
   await page.mouse.click(12, 120);
+  await expect(page.getByText("Keyboard Shortcuts")).not.toBeVisible();
+});
+
+test("toggles help with the question mark shortcut", async ({ page }) => {
+  await page.getByRole("textbox").click();
+  await page.keyboard.press("Control+/");
+
+  await expect(page.getByText("Keyboard Shortcuts")).toBeVisible();
+  await expect(page.getByText("Show/hide help")).toBeVisible();
+
+  await page.keyboard.press("Control+/");
+
+  await expect(page.getByText("Keyboard Shortcuts")).not.toBeVisible();
+});
+
+test("allows plain question marks in the editor", async ({ page }) => {
+  await page.getByRole("textbox").click();
+  await page.keyboard.type("Really?");
+
+  await expect(page.locator(".cm-line")).toContainText("Really?");
   await expect(page.getByText("Keyboard Shortcuts")).not.toBeVisible();
 });
 
