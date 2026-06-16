@@ -44,12 +44,12 @@ interface EditorProps {
 }
 
 const BASE_FONT_SIZE = 15;
-const LINE_HEIGHT = 1.9;
+const LINE_HEIGHT = 1.6;
 const MIN_ZOOM = 0.75;
 const MAX_ZOOM = 2;
-const EDITOR_PADDING_X = 38;
-const EDITOR_PADDING_Y = 44;
-const EDITOR_HEADER_PADDING_Y = 78;
+const EDITOR_PADDING_X = 80;
+const EDITOR_PADDING_Y = 40;
+const EDITOR_HEADER_PADDING_Y = 80;
 
 export function Editor({
   content,
@@ -288,8 +288,10 @@ function createExtensions(
       ".cm-line": {
         padding: "0",
       },
-      ".cm-focused": {
-        outline: "none",
+      "&.cm-focused, .cm-content:focus": {
+        outline: "0 solid transparent",
+        outlineColor: "transparent",
+        outlineWidth: "0",
       },
       ".cm-cursor": {
         borderLeftColor: "rgb(var(--tone-rgb) / 0.98)",

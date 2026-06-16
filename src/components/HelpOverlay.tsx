@@ -29,7 +29,7 @@ export function HelpOverlay({ visible, onClose }: HelpOverlayProps) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-[3px]"
+      className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-[2px]"
       onClick={onClose}
     >
       <div

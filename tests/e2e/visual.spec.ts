@@ -26,7 +26,20 @@ test("keeps the liquid glass shell visually configured", async ({ page }) => {
     };
   });
 
-  expect(styles.background).toContain("rgba(0, 1, 3");
+  await page.keyboard.press("Control+/");
+  const panel = page.locator(".help-panel");
+  await expect(panel).toBeVisible();
+
+  const panelStyles = await panel.evaluate((element) => {
+    const computed = window.getComputedStyle(element);
+    return {
+      background: computed.background,
+      borderColor: computed.borderColor,
+    };
+  });
+
+  expect(styles.background).toBe(panelStyles.background);
+  expect(styles.borderColor).toBe(panelStyles.borderColor);
   expect(styles.backdropFilter).toContain("blur");
   expect(styles.borderColor).not.toBe("rgba(0, 0, 0, 0)");
   expect(styles.boxShadow).not.toBe("none");
@@ -95,7 +108,9 @@ test("keeps help panel focus styling inside the app palette", async ({
   await page.keyboard.press("Control+/");
 
   const panel = page.locator(".help-panel");
+  const key = page.locator("kbd").filter({ hasText: "Ctrl" }).first();
   await expect(panel).toBeVisible();
+  await expect(key).toBeVisible();
 
   const styles = await panel.evaluate((element) => {
     const computed = window.getComputedStyle(element);
@@ -107,10 +122,49 @@ test("keeps help panel focus styling inside the app palette", async ({
     };
   });
 
+  const keyStyles = await key.evaluate((element) => {
+    const computed = window.getComputedStyle(element);
+    return {
+      fontFamily: computed.fontFamily,
+      fontWeight: computed.fontWeight,
+    };
+  });
+
   expect(styles.outlineWidth).toBe("0px");
   expect(styles.outlineStyle).not.toBe("auto");
   expect(styles.borderColor).not.toBe("rgb(255, 255, 255)");
   expect(styles.outlineColor).not.toBe("rgb(255, 255, 255)");
+  expect(keyStyles.fontFamily).toContain("JetBrains Mono");
+  expect(keyStyles.fontWeight).toBe("200");
+});
+
+test("keeps editor focus visually borderless", async ({ page }) => {
+  await page.getByRole("textbox").click();
+
+  const styles = await page.locator(".cm-editor").evaluate((element) => {
+    const editor = window.getComputedStyle(element);
+    const content = window.getComputedStyle(
+      element.querySelector(".cm-content") as Element,
+    );
+
+    return {
+      contentBorderTopWidth: content.borderTopWidth,
+      contentOutlineColor: content.outlineColor,
+      contentOutlineStyle: content.outlineStyle,
+      contentOutlineWidth: content.outlineWidth,
+      editorBorderTopWidth: editor.borderTopWidth,
+      editorOutlineColor: editor.outlineColor,
+      editorOutlineStyle: editor.outlineStyle,
+      editorOutlineWidth: editor.outlineWidth,
+    };
+  });
+
+  expect(styles.editorOutlineWidth).toBe("0px");
+  expect(styles.editorOutlineColor).toBe("rgba(0, 0, 0, 0)");
+  expect(styles.editorBorderTopWidth).toBe("0px");
+  expect(styles.contentOutlineWidth).toBe("0px");
+  expect(styles.contentOutlineColor).toBe("rgba(0, 0, 0, 0)");
+  expect(styles.contentBorderTopWidth).toBe("0px");
 });
 
 test("keeps the zoom HUD centered during its animation", async ({ page }) => {
@@ -163,27 +217,22 @@ test("keeps the zoom HUD visible when zoom activity is renewed", async ({
   expect(opacity).toBeGreaterThan(0.5);
 });
 
-test("keeps the zoom HUD related to help keys but darker", async ({ page }) => {
+test("keeps the zoom HUD consistent with the help panel glass style", async ({
+  page,
+}) => {
   await page.getByRole("textbox").click();
 
   await page.keyboard.press("Control+/");
-  const key = page.locator("kbd").filter({ hasText: "Ctrl" }).first();
-  await expect(key).toBeVisible();
+  const panel = page.locator(".help-panel");
+  await expect(panel).toBeVisible();
 
-  const keyStyles = await key.evaluate((element) => {
+  const panelStyles = await panel.evaluate((element) => {
     const computed = window.getComputedStyle(element);
     return {
-      backgroundColor: computed.backgroundColor,
+      background: computed.background,
       borderColor: computed.borderColor,
-      borderRadius: computed.borderRadius,
-      color: computed.color,
-      fontFamily: computed.fontFamily,
-      fontWeight: computed.fontWeight,
     };
   });
-
-  expect(keyStyles.fontFamily).toContain("JetBrains Mono");
-  expect(keyStyles.fontWeight).toBe("200");
 
   await page.keyboard.press("Control+/");
 
@@ -197,24 +246,15 @@ test("keeps the zoom HUD related to help keys but darker", async ({ page }) => {
   const hudStyles = await hud.evaluate((element) => {
     const computed = window.getComputedStyle(element);
     return {
-      backgroundColor: computed.backgroundColor,
+      background: computed.background,
       borderColor: computed.borderColor,
       borderRadius: computed.borderRadius,
       color: computed.color,
     };
   });
 
-  expect(hudStyles.borderColor).toBe(keyStyles.borderColor);
-  expect(hudStyles.borderRadius).toBe(keyStyles.borderRadius);
-  expect(hudStyles.color).toBe(keyStyles.color);
-  expect(colorBrightness(hudStyles.backgroundColor)).toBeLessThan(
-    colorBrightness(keyStyles.backgroundColor),
-  );
+  expect(hudStyles.background).toBe(panelStyles.background);
+  expect(hudStyles.borderColor).toBe(panelStyles.borderColor);
+  expect(hudStyles.borderRadius).toBe("6px");
+  expect(hudStyles.color).not.toBe("rgba(0, 0, 0, 0)");
 });
-
-function colorBrightness(color: string): number {
-  const [red = 0, green = 0, blue = 0] =
-    color.match(/\d+(\.\d+)?/g)?.map(Number) ?? [];
-
-  return red * 0.2126 + green * 0.7152 + blue * 0.0722;
-}

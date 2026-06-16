@@ -147,11 +147,11 @@ describe("Editor integration", () => {
     });
 
     const host = container.firstElementChild as HTMLElement;
-    expect(host).toHaveStyle({ transform: "translateY(44px)" });
+    expect(host).toHaveStyle({ transform: "translateY(40px)" });
 
     rerender(<Editor {...props} headerVisible />);
 
-    expect(host).toHaveStyle({ transform: "translateY(78px)" });
+    expect(host).toHaveStyle({ transform: "translateY(80px)" });
     expect(container.querySelector(".cm-line")).toHaveTextContent("plain text");
   });
 
