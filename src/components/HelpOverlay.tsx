@@ -1,4 +1,5 @@
-import { BookOpen, Astroid } from 'lucide-react';
+import { useEffect, useRef } from "react";
+import { Astroid, BookOpen } from "lucide-react";
 
 interface HelpOverlayProps {
   visible: boolean;
@@ -6,10 +7,18 @@ interface HelpOverlayProps {
 }
 
 export function HelpOverlay({ visible, onClose }: HelpOverlayProps) {
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (visible) {
+      panelRef.current?.focus();
+    }
+  }, [visible]);
+
   if (!visible) return null;
 
   const shortcuts = [
-    ["Ctrl", "+", "? / °", "Show/hide help"],
+    ["Ctrl", "+", "? / \u00b0", "Show/hide help"],
     ["Esc", "Minimize window"],
     ["Ctrl", "+", "Scroll", "Zoom"],
     ["Ctrl", "+", "0", "Reset zoom"],
@@ -24,6 +33,11 @@ export function HelpOverlay({ visible, onClose }: HelpOverlayProps) {
       onClick={onClose}
     >
       <div
+        ref={panelRef}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="help-title"
         className="help-panel w-[min(370px,calc(100vw-48px))] px-8 py-7"
         onClick={(event) => event.stopPropagation()}
       >
@@ -32,7 +46,9 @@ export function HelpOverlay({ visible, onClose }: HelpOverlayProps) {
         </div>
 
         <div className="mt-4 text-center">
-          <h2 className="tone-title text-sm font-medium">Keyboard Shortcuts</h2>
+          <h2 id="help-title" className="tone-title text-sm font-medium">
+            Keyboard Shortcuts
+          </h2>
         </div>
 
         <div className="mt-7 space-y-3">

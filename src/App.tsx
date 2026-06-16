@@ -168,16 +168,23 @@ export default function App() {
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
+      if (event.ctrlKey && (event.key === "/" || event.key === "?")) {
+        event.preventDefault();
+        event.stopPropagation();
+        setHelpVisible((current) => !current);
+        return;
+      }
+
+      if (helpVisible) {
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
+
       if ((event.ctrlKey || event.metaKey) && event.key === "0") {
         event.preventDefault();
         updateState({ zoom: DEFAULT_STATE.zoom });
         showZoomHud();
-        return;
-      }
-
-      if (event.ctrlKey && (event.key === "/" || event.key === "?")) {
-        event.preventDefault();
-        setHelpVisible((current) => !current);
         return;
       }
 
@@ -189,7 +196,7 @@ export default function App() {
 
     window.addEventListener("keydown", onKeyDown, true);
     return () => window.removeEventListener("keydown", onKeyDown, true);
-  }, [handleMinimize, showZoomHud, updateState]);
+  }, [handleMinimize, helpVisible, showZoomHud, updateState]);
 
   if (!ready) {
     return (

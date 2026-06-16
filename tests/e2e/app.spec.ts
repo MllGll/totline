@@ -40,7 +40,9 @@ test("reveals help from the hover header and dismisses it", async ({ page }) => 
   await page.getByRole("button", { name: "Help" }).click();
 
   await expect(page.getByText("Keyboard Shortcuts")).toBeVisible();
-  await expect(page.locator("kbd").filter({ hasText: "? / °" })).toBeVisible();
+  await expect(
+    page.locator("kbd").filter({ hasText: "? / \u00b0" }),
+  ).toBeVisible();
   await expect(page.getByText("Show/hide help")).toBeVisible();
   await expect(page.getByText("*text*")).toBeVisible();
   await expect(page.getByText("*line")).toBeVisible();
@@ -74,6 +76,19 @@ test("allows plain question marks in the editor", async ({ page }) => {
 
   await expect(page.locator(".cm-line")).toContainText("Really?");
   await expect(page.getByText("Keyboard Shortcuts")).not.toBeVisible();
+});
+
+test("blocks editor typing while help is open", async ({ page }) => {
+  await page.getByRole("textbox").click();
+  await page.keyboard.type("Before");
+  await page.keyboard.press("Control+/");
+
+  await expect(page.getByText("Keyboard Shortcuts")).toBeVisible();
+
+  await page.keyboard.type("Blocked");
+
+  await expect(page.locator(".cm-line")).toContainText("Before");
+  await expect(page.locator(".cm-line")).not.toContainText("Blocked");
 });
 
 test("shows zoom feedback when using ctrl wheel", async ({ page }) => {

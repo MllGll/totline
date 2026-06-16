@@ -79,3 +79,28 @@ test("centers the help panel above the editor", async ({ page }) => {
   expect(Math.abs(panelCenterY - viewportCenterY)).toBeLessThan(2);
   await expect(page.getByText("Keyboard Shortcuts")).toBeVisible();
 });
+
+test("keeps help panel focus styling inside the app palette", async ({
+  page,
+}) => {
+  await page.getByRole("textbox").click();
+  await page.keyboard.press("Control+/");
+
+  const panel = page.locator(".help-panel");
+  await expect(panel).toBeVisible();
+
+  const styles = await panel.evaluate((element) => {
+    const computed = window.getComputedStyle(element);
+    return {
+      borderColor: computed.borderColor,
+      outlineColor: computed.outlineColor,
+      outlineStyle: computed.outlineStyle,
+      outlineWidth: computed.outlineWidth,
+    };
+  });
+
+  expect(styles.outlineWidth).toBe("0px");
+  expect(styles.outlineStyle).not.toBe("auto");
+  expect(styles.borderColor).not.toBe("rgb(255, 255, 255)");
+  expect(styles.outlineColor).not.toBe("rgb(255, 255, 255)");
+});

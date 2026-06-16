@@ -212,6 +212,7 @@ body {
 .help-panel {
   position: relative;
   overflow: hidden;
+  outline: 0 solid transparent;
   color: rgb(var(--tone-rgb) / 0.86);
   border: 1px solid var(--edge-medium);
   border-radius: 16px;
@@ -226,6 +227,18 @@ body {
     linear-gradient(135deg, var(--light-trace) 0%, transparent 32%),
     linear-gradient(150deg, transparent 18%, var(--light-trace-soft) 48%, transparent 76%),
     linear-gradient(180deg, var(--surface-panel), rgb(var(--palette-surface-rgb) / 0.78));
+}
+
+.help-panel:focus,
+.help-panel:focus-visible {
+  outline: 0 solid transparent;
+  border-color: var(--edge-medium);
+  box-shadow:
+    0 34px 110px rgba(0, 0, 0, 0.42),
+    0 10px 34px rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 rgb(var(--palette-edge-rgb) / 0.24),
+    inset 0 -1px 0 rgb(var(--palette-faint-rgb) / 0.18),
+    0 0 0 1px rgb(var(--palette-edge-rgb) / 0.08);
 }
 
 .help-panel::before {
