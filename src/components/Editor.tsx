@@ -1,9 +1,7 @@
 import {
-  useCallback,
   useEffect,
   useMemo,
   useRef,
-  type WheelEvent,
 } from "react";
 import { history, historyKeymap, insertTab } from "@codemirror/commands";
 import {
@@ -77,6 +75,11 @@ export function Editor({
     onSelectionChange,
   });
   const scrollCallbackRef = useRef(onScrollChange);
+  const zoomRef = useRef(zoom);
+  const zoomCallbackRef = useRef({
+    onZoomActivity,
+    onZoomChange,
+  });
 
   useEffect(() => {
     callbacksRef.current = {
@@ -85,12 +88,22 @@ export function Editor({
       onSelectionChange,
     };
     scrollCallbackRef.current = onScrollChange;
+    zoomCallbackRef.current = {
+      onZoomActivity,
+      onZoomChange,
+    };
   }, [
     onContentChange,
     onCursorChange,
     onSelectionChange,
     onScrollChange,
+    onZoomActivity,
+    onZoomChange,
   ]);
+
+  useEffect(() => {
+    zoomRef.current = zoom;
+  }, [zoom]);
 
   const paddingY = headerVisible
     ? EDITOR_HEADER_PADDING_Y
@@ -123,10 +136,30 @@ export function Editor({
       );
     };
 
+    const onZoomWheel = (event: WheelEvent) => {
+      if (!event.ctrlKey) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      const delta = event.deltaY > 0 ? -0.05 : 0.05;
+      const next = clamp(zoomRef.current + delta, MIN_ZOOM, MAX_ZOOM);
+      const rounded = Number(next.toFixed(2));
+
+      zoomRef.current = rounded;
+      zoomCallbackRef.current.onZoomChange(rounded);
+      zoomCallbackRef.current.onZoomActivity();
+    };
+
     view.scrollDOM.addEventListener("scroll", onScroll, { passive: true });
+    host.addEventListener("wheel", onZoomWheel, {
+      capture: true,
+      passive: false,
+    });
 
     return () => {
       view.scrollDOM.removeEventListener("scroll", onScroll);
+      host.removeEventListener("wheel", onZoomWheel, { capture: true });
       view.destroy();
       viewRef.current = null;
     };
@@ -180,24 +213,10 @@ export function Editor({
     return () => window.clearTimeout(timeout);
   }, [headerVisible]);
 
-  const handleWheel = useCallback(
-    (event: WheelEvent<HTMLDivElement>) => {
-      if (!event.ctrlKey) return;
-
-      event.preventDefault();
-      const delta = event.deltaY > 0 ? -0.05 : 0.05;
-      const next = clamp(zoom + delta, MIN_ZOOM, MAX_ZOOM);
-      onZoomChange(Number(next.toFixed(2)));
-      onZoomActivity();
-    },
-    [onZoomActivity, onZoomChange, zoom],
-  );
-
   return (
     <div
       ref={hostRef}
       className="cm-editor-host h-full w-full"
-      onWheel={handleWheel}
       style={
         {
           "--editor-font-size": `${fontSize}px`,
