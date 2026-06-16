@@ -136,9 +136,25 @@ body {
   box-shadow: 0 0 18px rgb(var(--tone-accent-rgb) / 0.24);
 }
 
+.app-title-icon {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  transition: filter 250ms ease;
+}
+
+.app-title-icon:hover {
+  filter: brightness(1.5);
+}
+
 .app-title {
-  color: rgb(var(--tone-rgb) / 0.76);
+  color: rgb(var(--tone-rgb) / 0.7);
   text-shadow: 0 0 18px rgb(var(--tone-rgb) / 0.1);
+  transition: color 250ms ease;
+}
+
+.app-title:hover {
+  color: rgb(var(--tone-rgb) / 0.96);
 }
 
 .app-header-button {
@@ -146,31 +162,20 @@ body {
   width: 26px;
   height: 26px;
   place-items: center;
-  border: 1px solid transparent;
   border-radius: 999px;
-  background: rgb(var(--palette-surface-elevated-rgb) / 0.08);
-  color: rgb(var(--tone-rgb) / 0.72);
-  font-size: 11px;
-  line-height: 1;
+  color: rgb(var(--tone-rgb) / 0.7);
   transition:
-    transform 180ms cubic-bezier(0.22, 1, 0.36, 1),
-    color 180ms ease,
-    background 180ms ease,
-    border-color 180ms ease;
+    transform 500ms ease,
+    color 250ms ease,
 }
 
 .app-header-button:hover {
-  border-color: var(--edge-medium);
-  background: var(--accent-hover);
   color: rgb(var(--tone-rgb) / 0.96);
-  transform: translateY(-1px);
+  transform: scale(1.2);
 }
 
 .app-header-button-active {
-  color: rgb(var(--tone-rgb) / 0.96);
-  background: var(--accent);
-  border-color: var(--edge-medium);
-  box-shadow: inset 0 1px 0 rgb(var(--tone-rgb) / 0.22);
+  color: rgb(var(--tone-rgb));
 }
 
 ::selection {
