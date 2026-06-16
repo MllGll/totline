@@ -50,7 +50,7 @@ export function ZoomHud({ zoom, visible }: ZoomHudProps) {
   return (
     <div
       className={[
-        "zoom-hud pointer-events-none absolute bottom-7 left-1/2 z-40 rounded-[10px] px-3.5 py-2 text-[12px] font-medium tabular-nums",
+        "zoom-hud pointer-events-none absolute bottom-7 left-1/2 z-40 rounded-md px-3.5 py-2 text-[12px] font-medium tabular-nums",
         `zoom-hud-${phase}`,
       ].join(" ")}
     >

@@ -154,3 +154,54 @@ test("keeps the zoom HUD visible when zoom activity is renewed", async ({
 
   expect(opacity).toBeGreaterThan(0.5);
 });
+
+test("keeps the zoom HUD related to help keys but darker", async ({ page }) => {
+  await page.getByRole("textbox").click();
+
+  await page.keyboard.press("Control+/");
+  const key = page.locator("kbd").filter({ hasText: "Ctrl" }).first();
+  await expect(key).toBeVisible();
+
+  const keyStyles = await key.evaluate((element) => {
+    const computed = window.getComputedStyle(element);
+    return {
+      backgroundColor: computed.backgroundColor,
+      borderColor: computed.borderColor,
+      borderRadius: computed.borderRadius,
+      color: computed.color,
+    };
+  });
+
+  await page.keyboard.press("Control+/");
+
+  await page.keyboard.down("Control");
+  await page.mouse.wheel(0, -140);
+  await page.keyboard.up("Control");
+
+  const hud = page.locator(".zoom-hud");
+  await expect(hud).toBeVisible();
+
+  const hudStyles = await hud.evaluate((element) => {
+    const computed = window.getComputedStyle(element);
+    return {
+      backgroundColor: computed.backgroundColor,
+      borderColor: computed.borderColor,
+      borderRadius: computed.borderRadius,
+      color: computed.color,
+    };
+  });
+
+  expect(hudStyles.borderColor).toBe(keyStyles.borderColor);
+  expect(hudStyles.borderRadius).toBe(keyStyles.borderRadius);
+  expect(hudStyles.color).toBe(keyStyles.color);
+  expect(colorBrightness(hudStyles.backgroundColor)).toBeLessThan(
+    colorBrightness(keyStyles.backgroundColor),
+  );
+});
+
+function colorBrightness(color: string): number {
+  const [red = 0, green = 0, blue = 0] =
+    color.match(/\d+(\.\d+)?/g)?.map(Number) ?? [];
+
+  return red * 0.2126 + green * 0.7152 + blue * 0.0722;
+}
