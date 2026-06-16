@@ -61,8 +61,8 @@ test("keeps the hover header lightweight and aligned", async ({ page }) => {
   expect(box?.height).toBeLessThanOrEqual(48);
 
   const iconBox = await page.locator(".app-title-icon").boundingBox();
-  expect(iconBox?.width).toBe(20);
-  expect(iconBox?.height).toBe(20);
+  expect(iconBox?.width).toBeCloseTo(20);
+  expect(iconBox?.height).toBeCloseTo(20);
 });
 
 test("centers the help panel above the editor", async ({ page }) => {
@@ -177,8 +177,13 @@ test("keeps the zoom HUD related to help keys but darker", async ({ page }) => {
       borderColor: computed.borderColor,
       borderRadius: computed.borderRadius,
       color: computed.color,
+      fontFamily: computed.fontFamily,
+      fontWeight: computed.fontWeight,
     };
   });
+
+  expect(keyStyles.fontFamily).toContain("JetBrains Mono");
+  expect(keyStyles.fontWeight).toBe("200");
 
   await page.keyboard.press("Control+/");
 

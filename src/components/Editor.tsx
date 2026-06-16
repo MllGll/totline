@@ -268,9 +268,11 @@ function createExtensions(
         background: "transparent",
         color: "rgb(var(--tone-rgb) / 0.9)",
         fontSize: "var(--editor-font-size)",
+        fontWeight: "200",
       },
       ".cm-scroller": {
-        fontFamily: "Cascadia Code, Consolas, ui-monospace, monospace",
+        fontFamily:
+          "'JetBrains Mono', 'Cascadia Code', Consolas, ui-monospace, monospace",
         lineHeight: "var(--editor-line-height)",
         background: "transparent",
         overflow: "auto",

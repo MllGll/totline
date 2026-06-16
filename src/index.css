@@ -322,6 +322,8 @@ body {
   border-color: var(--key-border);
   background: var(--key-background);
   color: var(--key-color);
+  font-family: "JetBrains Mono", "Cascadia Code", Consolas, ui-monospace, monospace;
+  font-weight: 200;
   box-shadow: var(--key-shadow);
 }
 

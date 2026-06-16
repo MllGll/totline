@@ -73,7 +73,7 @@ export function HelpOverlay({ visible, onClose }: HelpOverlayProps) {
                     ) : (
                       <kbd
                         key={`${key}-${keyIndex}`}
-                        className="tone-key rounded-md border px-2 py-1 font-mono text-[10px]"
+                        className="tone-key rounded-md border px-2 py-1 text-[10px]"
                       >
                         {key}
                       </kbd>
