@@ -83,10 +83,18 @@ body {
 }
 
 .app-glass {
+  --glass-radius-top-left: var(--glass-radius);
+  --glass-radius-top-right: var(--glass-radius);
+  --glass-radius-bottom-right: var(--glass-radius);
+  --glass-radius-bottom-left: var(--glass-radius);
   isolation: isolate;
   position: relative;
   border: 1px solid var(--edge-medium);
-  border-radius: var(--glass-radius);
+  border-radius:
+    var(--glass-radius-top-left)
+    var(--glass-radius-top-right)
+    var(--glass-radius-bottom-right)
+    var(--glass-radius-bottom-left);
   background-clip: padding-box;
   background:
     linear-gradient(135deg, var(--light-trace) 0%, transparent 32%),
@@ -100,8 +108,35 @@ body {
     inset 0 -1px 0 rgb(var(--tone-accent-rgb) / 0.08),
     inset 1px 0 0 rgb(var(--tone-soft-rgb) / 0.09),
     inset -1px 0 0 rgba(22, 30, 44, 0.032);
-  clip-path: inset(0 round var(--glass-radius));
+  clip-path:
+    inset(
+      0 round
+      var(--glass-radius-top-left)
+      var(--glass-radius-top-right)
+      var(--glass-radius-bottom-right)
+      var(--glass-radius-bottom-left)
+    );
   contain: paint;
+}
+
+.app-window-snapped-top {
+  --glass-radius-top-left: 0px;
+  --glass-radius-top-right: 0px;
+}
+
+.app-window-snapped-right {
+  --glass-radius-top-right: 0px;
+  --glass-radius-bottom-right: 0px;
+}
+
+.app-window-snapped-bottom {
+  --glass-radius-bottom-right: 0px;
+  --glass-radius-bottom-left: 0px;
+}
+
+.app-window-snapped-left {
+  --glass-radius-top-left: 0px;
+  --glass-radius-bottom-left: 0px;
 }
 
 .app-glass::before {
@@ -126,7 +161,7 @@ body {
   inset: 1px;
   z-index: 0;
   pointer-events: none;
-  border-radius: calc(var(--glass-radius) - 1px);
+  border-radius: inherit;
   background:
     linear-gradient(124deg, transparent 0 22%, rgba(152, 174, 206, 0.044) 36%, transparent 52%),
     linear-gradient(180deg, rgba(92, 116, 150, 0.04), transparent 20%);
