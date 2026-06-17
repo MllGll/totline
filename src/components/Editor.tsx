@@ -8,6 +8,7 @@ import { history, historyKeymap, insertTab } from "@codemirror/commands";
 import {
   EditorSelection,
   EditorState,
+  Prec,
   type Extension,
   RangeSetBuilder,
 } from "@codemirror/state";
@@ -418,6 +419,7 @@ function createExtensions(
   return [
     history(),
     drawSelection({ cursorBlinkRate: 0 }),
+    editorSelectionTheme,
     EditorView.lineWrapping,
     EditorState.tabSize.of(8),
     keymap.of([
@@ -576,9 +578,6 @@ function createExtensions(
           "totline-caret-pulse 750ms cubic-bezier(0.22, 1, 0.36, 1) infinite",
         pointerEvents: "none",
       },
-      ".cm-selectionBackground, &.cm-focused .cm-selectionBackground": {
-        background: "rgb(var(--tone-accent-rgb) / 0.34)",
-      },
       ".cm-bold-text": {
         color: "rgb(var(--tone-rgb) / 0.98)",
         fontWeight: "700",
@@ -634,6 +633,29 @@ function createExtensions(
     placeholderExtension("Start writing..."),
   ];
 }
+
+const editorSelectionTheme = Prec.highest(
+  EditorView.theme({
+    ".cm-line": {
+      "& ::selection, &::selection": {
+        backgroundColor: "transparent !important",
+      },
+    },
+    ".cm-content": {
+      "& :focus": {
+        "&::selection, & ::selection": {
+          backgroundColor: "transparent !important",
+        },
+      },
+    },
+    ".cm-selectionBackground": {
+      backgroundColor: "rgb(var(--tone-soft-rgb) / 0.1) !important",
+    },
+    "&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground": {
+      backgroundColor: "rgb(var(--tone-soft-rgb) / 0.2) !important",
+    },
+  }),
+);
 
 const editorDecorations = ViewPlugin.fromClass(
   class {
