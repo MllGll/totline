@@ -417,7 +417,7 @@ function createExtensions(
 ): Extension[] {
   return [
     history(),
-    drawSelection(),
+    drawSelection({ cursorBlinkRate: 0 }),
     EditorView.lineWrapping,
     EditorState.tabSize.of(8),
     keymap.of([
@@ -561,10 +561,20 @@ function createExtensions(
         outlineColor: "transparent",
         outlineWidth: "0",
       },
+      ".cm-cursorLayer": {
+        animation: "none",
+        opacity: "1",
+      },
       ".cm-cursor": {
-        borderLeftColor: "rgb(var(--tone-rgb) / 0.98)",
-        borderLeftWidth: "1px",
-        boxShadow: "0 0 10px rgb(var(--tone-rgb) / 0.28)",
+        width: "1px",
+        marginLeft: "-1px",
+        borderLeft: "0",
+        borderRadius: "999px",
+        background: "rgb(var(--tone-rgb) / 0.92)",
+        boxShadow: "0 0 8px rgb(var(--tone-rgb) / 0.16)",
+        animation:
+          "totline-caret-pulse 750ms cubic-bezier(0.22, 1, 0.36, 1) infinite",
+        pointerEvents: "none",
       },
       ".cm-selectionBackground, &.cm-focused .cm-selectionBackground": {
         background: "rgb(var(--tone-accent-rgb) / 0.34)",

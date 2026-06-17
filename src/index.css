@@ -187,6 +187,28 @@ body {
   background: rgb(var(--tone-accent-rgb) / 0.34);
 }
 
+@keyframes totline-caret-pulse {
+  0% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0;
+  }
+
+  100% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cm-editor .cm-cursor {
+    animation: none !important;
+    opacity: 1;
+    transform: none;
+  }
+}
+
 .cm-editor-host .cm-scroller {
   --editor-top-mask-opacity: 1;
   --editor-bottom-mask-opacity: 1;
