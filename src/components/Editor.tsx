@@ -227,10 +227,24 @@ export function Editor({
       const delta = event.deltaY > 0 ? -0.05 : 0.05;
       const next = clamp(zoomRef.current + delta, MIN_ZOOM, MAX_ZOOM);
       const rounded = Number(next.toFixed(2));
+      const previousScrollTop = view.scrollDOM.scrollTop;
+      const previousScrollLeft = view.scrollDOM.scrollLeft;
 
       zoomRef.current = rounded;
       zoomCallbackRef.current.onZoomChange(rounded);
       zoomCallbackRef.current.onZoomActivity();
+
+      view.scrollDOM.scrollTop = previousScrollTop;
+      view.scrollDOM.scrollLeft = previousScrollLeft;
+      scrollCallbackRef.current(previousScrollTop, previousScrollLeft);
+      updateScrollbarMetrics(view.scrollDOM, setScrollbarMetrics);
+
+      requestAnimationFrame(() => {
+        view.scrollDOM.scrollTop = previousScrollTop;
+        view.scrollDOM.scrollLeft = previousScrollLeft;
+        scrollCallbackRef.current(previousScrollTop, previousScrollLeft);
+        updateScrollbarMetrics(view.scrollDOM, setScrollbarMetrics);
+      });
     };
 
     view.scrollDOM.addEventListener("scroll", onScroll, { passive: true });
@@ -584,10 +598,12 @@ function createExtensions(
       },
       ".cm-completed-text": {
         color: "rgb(var(--tone-soft-rgb) / 0.62)",
+        textDecorationLine: "line-through",
+        textDecorationColor: "rgb(var(--tone-soft-rgb) / 0.62)",
       },
       ".cm-completed-text .cm-bold-text, .cm-bold-text.cm-completed-text, .cm-bold-text .cm-completed-text": {
         color: "rgb(var(--tone-soft-rgb) / 0.62)",
-        textDecorationColor: "rgb(var(--tone-soft-rgb) / 0.58)",
+        textDecorationColor: "rgb(var(--tone-soft-rgb) / 0.62)",
       },
       ".cm-checkbox-slot": {
         boxSizing: "border-box",

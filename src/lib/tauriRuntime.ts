@@ -50,24 +50,7 @@ export function getAppWindow(): AppWindow {
 
 export async function getCurrentAppMonitor(): Promise<AppMonitor | null> {
   if (isTauriRuntime()) return normalizeMonitor(await currentMonitor());
-
-  const screen = window.screen as Screen & {
-    availLeft?: number;
-    availTop?: number;
-  };
-
-  return {
-    workArea: {
-      position: {
-        x: screen.availLeft ?? 0,
-        y: screen.availTop ?? 0,
-      },
-      size: {
-        width: screen.availWidth,
-        height: screen.availHeight,
-      },
-    },
-  };
+  return null;
 }
 
 function normalizeMonitor(monitor: Monitor | null): AppMonitor | null {
