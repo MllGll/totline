@@ -13,18 +13,38 @@ import {
   saveWindowState,
   setAlwaysOnTop,
 } from "./lib/tauri";
-import { getAppWindow, listenAppEvent } from "./lib/tauriRuntime";
+import {
+  getAppWindow,
+  getCurrentAppMonitor,
+  listenAppEvent,
+} from "./lib/tauriRuntime";
 import type { AppState } from "./types";
 import { DEFAULT_STATE } from "./types";
 
 const AUTOSAVE_MS = 500;
 const ZOOM_HUD_MS = 900;
+const SNAP_EDGE_TOLERANCE_PX = 8;
+
+interface SnappedEdges {
+  top: boolean;
+  right: boolean;
+  bottom: boolean;
+  left: boolean;
+}
+
+const FREE_EDGES: SnappedEdges = {
+  top: false,
+  right: false,
+  bottom: false,
+  left: false,
+};
 
 export default function App() {
   const [state, setState] = useState<AppState>(DEFAULT_STATE);
   const [ready, setReady] = useState(false);
   const [zoomHudVisible, setZoomHudVisible] = useState(false);
   const [helpVisible, setHelpVisible] = useState(false);
+  const [snappedEdges, setSnappedEdges] = useState<SnappedEdges>(FREE_EDGES);
   const zoomHudTimer = useRef<number | null>(null);
   const stateRef = useRef<AppState>(DEFAULT_STATE);
   const headerVisible = useHeaderReveal(helpVisible);
@@ -107,6 +127,60 @@ export default function App() {
       void unlistenQuit.then((fn) => fn());
     };
   }, [ready, handleHideToTray, handleQuit]);
+
+  useEffect(() => {
+    if (!ready) return;
+
+    const appWindow = getAppWindow();
+    let mounted = true;
+    let pending = false;
+
+    const updateSnappedEdges = async () => {
+      pending = false;
+
+      const [position, size, monitor] = await Promise.all([
+        appWindow.outerPosition(),
+        appWindow.outerSize(),
+        getCurrentAppMonitor(),
+      ]);
+
+      if (!mounted || !monitor) return;
+
+      const { workArea } = monitor;
+      const workLeft = workArea.position.x;
+      const workTop = workArea.position.y;
+      const workRight = workLeft + workArea.size.width;
+      const workBottom = workTop + workArea.size.height;
+      const windowRight = position.x + size.width;
+      const windowBottom = position.y + size.height;
+
+      setSnappedEdges({
+        left: nearlyEqual(position.x, workLeft, SNAP_EDGE_TOLERANCE_PX),
+        top: nearlyEqual(position.y, workTop, SNAP_EDGE_TOLERANCE_PX),
+        right: nearlyEqual(windowRight, workRight, SNAP_EDGE_TOLERANCE_PX),
+        bottom: nearlyEqual(windowBottom, workBottom, SNAP_EDGE_TOLERANCE_PX),
+      });
+    };
+
+    const scheduleSnappedEdgesUpdate = () => {
+      if (pending) return;
+      pending = true;
+      requestAnimationFrame(() => {
+        void updateSnappedEdges();
+      });
+    };
+
+    scheduleSnappedEdgesUpdate();
+
+    const unlistenMove = appWindow.onMoved(scheduleSnappedEdgesUpdate);
+    const unlistenResize = appWindow.onResized(scheduleSnappedEdgesUpdate);
+
+    return () => {
+      mounted = false;
+      void unlistenMove.then((fn) => fn());
+      void unlistenResize.then((fn) => fn());
+    };
+  }, [ready]);
 
   const updateState = useCallback(
     (patch: Partial<AppState>) => {
@@ -207,7 +281,15 @@ export default function App() {
   }
 
   return (
-    <div className="app-glass relative h-full w-full overflow-hidden">
+    <div
+      className={[
+        "app-glass relative h-full w-full overflow-hidden",
+        snappedEdges.top ? "app-window-snapped-top" : "",
+        snappedEdges.right ? "app-window-snapped-right" : "",
+        snappedEdges.bottom ? "app-window-snapped-bottom" : "",
+        snappedEdges.left ? "app-window-snapped-left" : "",
+      ].join(" ")}
+    >
       <main className="absolute inset-0 z-10">
         <Editor
           content={state.content}
@@ -244,4 +326,8 @@ export default function App() {
       <HelpOverlay visible={helpVisible} onClose={() => setHelpVisible(false)} />
     </div>
   );
+}
+
+function nearlyEqual(value: number, target: number, tolerance: number): boolean {
+  return Math.abs(value - target) <= tolerance;
 }

@@ -1,5 +1,6 @@
 import { listen as tauriListen } from "@tauri-apps/api/event";
-import { getCurrentWindow } from "@tauri-apps/api/window";
+import { currentMonitor, getCurrentWindow } from "@tauri-apps/api/window";
+import type { Monitor } from "@tauri-apps/api/window";
 
 type Unlisten = () => void;
 
@@ -8,6 +9,13 @@ interface AppWindow {
   outerSize: () => Promise<{ width: number; height: number }>;
   onMoved: (handler: () => void) => Promise<Unlisten>;
   onResized: (handler: () => void) => Promise<Unlisten>;
+}
+
+interface AppMonitor {
+  workArea: {
+    position: { x: number; y: number };
+    size: { width: number; height: number };
+  };
 }
 
 export function isTauriRuntime(): boolean {
@@ -37,5 +45,27 @@ export function getAppWindow(): AppWindow {
     }),
     onMoved: async () => () => {},
     onResized: async () => () => {},
+  };
+}
+
+export async function getCurrentAppMonitor(): Promise<AppMonitor | null> {
+  if (isTauriRuntime()) return normalizeMonitor(await currentMonitor());
+  return null;
+}
+
+function normalizeMonitor(monitor: Monitor | null): AppMonitor | null {
+  if (!monitor) return null;
+
+  return {
+    workArea: {
+      position: {
+        x: monitor.workArea.position.x,
+        y: monitor.workArea.position.y,
+      },
+      size: {
+        width: monitor.workArea.size.width,
+        height: monitor.workArea.size.height,
+      },
+    },
   };
 }

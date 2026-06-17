@@ -33,6 +33,38 @@ test("supports the core writing flow", async ({ page }) => {
   );
 });
 
+test("keeps completed bold checkbox text muted", async ({ page }) => {
+  await page.getByRole("textbox").click();
+  await page.keyboard.type("[x] *Muted* task");
+
+  const completedText = page.locator(".cm-completed-text").first();
+  const completedBoldText = page.locator(".cm-completed-text .cm-bold-text");
+
+  await expect(completedText).toContainText("Muted task");
+  await expect(completedBoldText).toHaveText("Muted");
+
+  const colors = await completedBoldText.evaluate((element) => {
+    const bold = window.getComputedStyle(element);
+    const completed = window.getComputedStyle(
+      element.closest(".cm-completed-text") as Element,
+    );
+
+    return {
+      boldColor: bold.color,
+      boldDecorationColor: bold.textDecorationColor,
+      completedColor: completed.color,
+      completedDecorationColor: completed.textDecorationColor,
+      fontWeight: bold.fontWeight,
+      textDecorationLine: completed.textDecorationLine,
+    };
+  });
+
+  expect(colors.boldColor).toBe(colors.completedColor);
+  expect(colors.boldDecorationColor).toBe(colors.completedDecorationColor);
+  expect(Number(colors.fontWeight)).toBeGreaterThanOrEqual(700);
+  expect(colors.textDecorationLine).toContain("line-through");
+});
+
 test("reveals help from the hover header and dismisses it", async ({ page }) => {
   await page.mouse.move(8, 8);
 
@@ -129,6 +161,7 @@ test("uses ctrl wheel for zoom without scrolling the editor", async ({
   const scroller = page.locator(".cm-scroller");
   await scroller.evaluate((element) => {
     element.scrollTop = 260;
+    element.dispatchEvent(new Event("scroll", { bubbles: true }));
   });
 
   const before = await scroller.evaluate((element) => element.scrollTop);

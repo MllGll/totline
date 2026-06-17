@@ -147,17 +147,29 @@ describe("Editor integration", () => {
     });
 
     const host = container.firstElementChild as HTMLElement;
-    expect(host).toHaveStyle({ transform: "translateY(44px)" });
+    expect(host).toHaveStyle({ transform: "translateY(40px)" });
 
     rerender(<Editor {...props} headerVisible />);
 
-    expect(host).toHaveStyle({ transform: "translateY(78px)" });
+    expect(host).toHaveStyle({ transform: "translateY(80px)" });
     expect(container.querySelector(".cm-line")).toHaveTextContent("plain text");
+  });
+
+  it("uses JetBrains Mono as the editor typeface with a light normal weight", () => {
+    renderEditor({ content: "plain text" });
+
+    const scroller = document.querySelector(".cm-scroller") as HTMLElement;
+    const editor = document.querySelector(".cm-editor") as HTMLElement;
+
+    expect(window.getComputedStyle(scroller).fontFamily).toContain(
+      "JetBrains Mono",
+    );
+    expect(window.getComputedStyle(editor).fontWeight).toBe("100");
   });
 
   it("changes zoom with ctrl wheel and reports zoom activity", () => {
     const { container, props } = renderEditor({ zoom: 1 });
-    const host = container.firstElementChild as HTMLElement;
+    const host = container.querySelector(".cm-editor-mount") as HTMLElement;
 
     fireEvent.wheel(host, { ctrlKey: true, deltaY: -100 });
 
